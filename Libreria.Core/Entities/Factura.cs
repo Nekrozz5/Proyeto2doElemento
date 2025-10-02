@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace Libreria.Core.Entities
 {
-    public partial class Factura
-    {
+    
+    
         public partial class Factura
         {
             public int Id { get; set; }
@@ -20,5 +20,5 @@ namespace Libreria.Core.Entities
         }
 
 
-    }
+    
 }

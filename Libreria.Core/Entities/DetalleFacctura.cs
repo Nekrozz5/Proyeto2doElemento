@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Libreria.Core.Entities
 {
-    public class DetalleFactura
+    public partial class DetalleFactura
     {
         public int Id { get; set; }
         public int Cantidad { get; set; }

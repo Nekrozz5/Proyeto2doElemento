@@ -8,9 +8,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libreria.Core", "Libreria.Core\Libreria.Core.csproj", "{74054A12-5768-4BEE-BBD5-F862A633AC8E}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Libreria.Infrastructure", "Libreria.Infrastructure\Libreria.Infrastructure.csproj", "{E0413837-833D-44FB-A545-4662D2FBB427}"
-	ProjectSection(ProjectDependencies) = postProject
-		{74054A12-5768-4BEE-BBD5-F862A633AC8E} = {74054A12-5768-4BEE-BBD5-F862A633AC8E}
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
