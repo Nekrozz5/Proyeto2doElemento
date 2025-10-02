@@ -1,23 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Libreria.Core.Entities
+﻿namespace Libreria.Core.Entities
 {
     public partial class Libro
     {
-        public string Titulo { get; set; }
-        public string Autor { get; set; }
-
+        public int Id { get; set; }
+        public string Titulo { get; set; } = string.Empty;
         public int AnioPublicacion { get; set; }
-
-        public string Descripcion { get; set; }
-
+        public string Descripcion { get; set; } = string.Empty;
         public double Precio { get; set; }
         public int Stock { get; set; }
 
-
+        // Relación con Autor
+        public int AutorId { get; set; }
+        public virtual Autor Autor { get; set; }
     }
+
 }

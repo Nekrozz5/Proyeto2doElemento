@@ -12,5 +12,9 @@ namespace Libreria.Core.Entities
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
+
+        // Relación: un cliente puede tener muchas facturas
+        public virtual ICollection<Factura> Facturas { get; set; } = new List<Factura>();
     }
+
 }
