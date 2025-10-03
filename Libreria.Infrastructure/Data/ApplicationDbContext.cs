@@ -11,7 +11,7 @@ namespace Libreria.Infrastructure.Data
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options) { }
 
-        // Tablas de tu librería
+        //   Tablas de tu librería
         public virtual DbSet<Libro> Libros { get; set; }
         public virtual DbSet<Autor> Autores { get; set; }
         public virtual DbSet<Cliente> Clientes { get; set; }

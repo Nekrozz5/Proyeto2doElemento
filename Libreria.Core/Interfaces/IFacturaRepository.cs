@@ -18,4 +18,5 @@ namespace Libreria.Core.Interfaces
         // Extra: obtener facturas de un cliente
         Task<IEnumerable<Factura>> GetFacturasPorClienteAsync(int clienteId);
     }
+
 }
