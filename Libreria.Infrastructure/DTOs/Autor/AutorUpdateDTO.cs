@@ -4,15 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Libreria.Core.Entities
+namespace Libreria.Infrastructure.DTOs.Autor
 {
-    public partial class Cliente
+    public class AutorUpdateDto
     {
-        public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public virtual ICollection<Factura> Facturas { get; set; } = new List<Factura>();
     }
-
 }
