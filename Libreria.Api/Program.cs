@@ -1,23 +1,28 @@
 ﻿using Libreria.Infrastructure.Data;
 using Libreria.Infrastructure.Mappings;
+using Libreria.Core.Interfaces;
+using Libreria.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-using Pomelo.EntityFrameworkCore.MySql.Storage;
 using AutoMapper;
+using FluentValidation.AspNetCore;
+using Libreria.Api.Validators;
 
 namespace Libreria.Api
 {
-   
     public class Program
     {
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            builder.Services.AddControllers();
+            // Controladores y FluentValidation
+            builder.Services.AddControllers()
+                .AddFluentValidation(config =>
+                {
+                    config.RegisterValidatorsFromAssemblyContaining<LibroCreateValidator>();
+                });
 
-            // ✅ Inyectar ApplicationDbContext con MySQL
+            // ✅ Base de datos MySQL
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(
                     builder.Configuration.GetConnectionString("MySqlConnection"),
@@ -26,12 +31,27 @@ namespace Libreria.Api
                 )
             );
 
-            // ✅ Registrar AutoMapper
+            // ✅ AutoMapper
             builder.Services.AddAutoMapper(typeof(MappingProfile));
+
+            // ✅ Inyección de repositorios
+            builder.Services.AddScoped<ILibroRepository, LibroRepository>();
+            builder.Services.AddScoped<IAutorRepository, AutorRepository>();
+            builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+            builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
+
+            // Add services to the container.
+            builder.Services.AddControllers().AddNewtonsoftJson(options =>
+            {
+                options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+            }).ConfigureApiBehaviorOptions(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
+
 
             var app = builder.Build();
 
-            // Configure the HTTP request pipeline.
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();
