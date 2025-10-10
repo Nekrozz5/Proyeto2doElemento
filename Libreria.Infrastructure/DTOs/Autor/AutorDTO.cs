@@ -8,7 +8,7 @@ namespace Libreria.Infrastructure.DTOs.Autor
 {
     namespace Libreria.Api.DTOs.Autor
     {
-        public class AutorDto
+        public class AutorDTO
         {
             public int Id { get; set; }
             public string Nombre { get; set; } = string.Empty;
