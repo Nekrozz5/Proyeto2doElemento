@@ -2,6 +2,7 @@
 using Libreria.Infrastructure.Mappings;
 using Libreria.Core.Interfaces;
 using Libreria.Infrastructure.Repositories;
+using Libreria.Core.Services;
 using Microsoft.EntityFrameworkCore;
 using AutoMapper;
 using FluentValidation.AspNetCore;
@@ -15,14 +16,29 @@ namespace Libreria.Api
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Controladores y FluentValidation
+            // =====================================
+            // 🧱 Controladores y Validadores
+            // =====================================
             builder.Services.AddControllers()
                 .AddFluentValidation(config =>
                 {
                     config.RegisterValidatorsFromAssemblyContaining<LibroCreateValidator>();
+                })
+                .AddNewtonsoftJson(options =>
+                {
+                    // Evita bucles de referencias en JSON (importante con EF)
+                    options.SerializerSettings.ReferenceLoopHandling =
+                        Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+                })
+                .ConfigureApiBehaviorOptions(options =>
+                {
+                    // Permite manejar manualmente los errores de validación
+                    options.SuppressModelStateInvalidFilter = true;
                 });
 
-            // ✅ Base de datos MySQL
+            // =====================================
+            // 🗄️ Base de datos MySQL
+            // =====================================
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(
                     builder.Configuration.GetConnectionString("MySqlConnection"),
@@ -31,30 +47,42 @@ namespace Libreria.Api
                 )
             );
 
-            // ✅ AutoMapper
+            // =====================================
+            // 🔁 AutoMapper
+            // =====================================
             builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-            // ✅ Inyección de repositorios
+            // =====================================
+            // 🧩 Repositorios
+            // =====================================
             builder.Services.AddScoped<ILibroRepository, LibroRepository>();
             builder.Services.AddScoped<IAutorRepository, AutorRepository>();
             builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
             builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
 
-            // Add services to the container.
-            builder.Services.AddControllers().AddNewtonsoftJson(options =>
-            {
-                options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-            }).ConfigureApiBehaviorOptions(options =>
-            {
-                options.SuppressModelStateInvalidFilter = true;
-            });
+            // =====================================
+            // ⚙️ Servicios (Lógica de negocio)
+            // =====================================
+            builder.Services.AddScoped<LibroService>();
+            builder.Services.AddScoped<AutorService>();
+            builder.Services.AddScoped<ClienteService>();
+            builder.Services.AddScoped<FacturaService>();
 
-
+            // =====================================
+            // 🚀 Construcción de la aplicación
+            // =====================================
             var app = builder.Build();
 
+            // =====================================
+            // 🌐 Middleware
+            // =====================================
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();
+
+            // =====================================
+            // ▶️ Ejecutar la aplicación
+            // =====================================
             app.Run();
         }
     }
