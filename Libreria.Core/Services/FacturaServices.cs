@@ -41,26 +41,29 @@ namespace Libreria.Core.Services
             if (cliente == null)
                 throw new Exception("El cliente no existe.");
 
-            // Calcula total de factura
-            double total = 0;
+            if (factura.DetalleFacturas == null || !factura.DetalleFacturas.Any())
+                throw new Exception("La factura debe tener al menos un detalle.");
+
+            decimal total = 0;
             foreach (var detalle in factura.DetalleFacturas)
             {
                 var libro = await _libroRepository.GetByIdAsync(detalle.LibroId);
                 if (libro == null)
                     throw new Exception($"El libro con ID {detalle.LibroId} no existe.");
 
-                total += (double)(detalle.PrecioUnitario * detalle.Cantidad);
+                total += detalle.PrecioUnitario * detalle.Cantidad;  // ✅ todo en decimal
 
-                // Opcional: reducir stock
+                // Reducir stock
                 libro.Stock -= detalle.Cantidad;
                 await _libroRepository.UpdateAsync(libro);
             }
 
-            factura.Total = total;
+            factura.Total = total;              // ✅ ahora ambos son decimal
             factura.Fecha = DateTime.Now;
 
             await _facturaRepository.AddAsync(factura);
         }
+
 
         public async Task DeleteAsync(int id)
         {
