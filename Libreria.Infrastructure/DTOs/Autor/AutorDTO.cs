@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Libreria.Infrastructure.DTOs.Libro;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,7 +14,8 @@ namespace Libreria.Infrastructure.DTOs.Autor
             public int Id { get; set; }
             public string Nombre { get; set; } = string.Empty;
             public string Apellido { get; set; } = string.Empty;
-            public List<string>? Libros { get; set; }
+            public List<LibroDto> Libros { get; set; } = new();
+
         }
     }
 

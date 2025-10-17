@@ -17,7 +17,7 @@ namespace Libreria.Api
             var builder = WebApplication.CreateBuilder(args);
 
             // =====================================
-            // 🧱 Controladores y Validadores
+            // Controladores y Validadores
             // =====================================
             builder.Services.AddControllers()
                 .AddFluentValidation(config =>
@@ -26,18 +26,16 @@ namespace Libreria.Api
                 })
                 .AddNewtonsoftJson(options =>
                 {
-                    // Evita bucles de referencias en JSON (importante con EF)
                     options.SerializerSettings.ReferenceLoopHandling =
                         Newtonsoft.Json.ReferenceLoopHandling.Ignore;
                 })
                 .ConfigureApiBehaviorOptions(options =>
                 {
-                    // Permite manejar manualmente los errores de validación
                     options.SuppressModelStateInvalidFilter = true;
                 });
 
             // =====================================
-            // 🗄️ Base de datos MySQL
+            // Base de datos MySQL
             // =====================================
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(
@@ -48,12 +46,12 @@ namespace Libreria.Api
             );
 
             // =====================================
-            // 🔁 AutoMapper
+            // AutoMapper
             // =====================================
             builder.Services.AddAutoMapper(typeof(MappingProfile));
 
             // =====================================
-            // 🧩 Repositorios
+            // Repositorios
             // =====================================
             builder.Services.AddScoped<ILibroRepository, LibroRepository>();
             builder.Services.AddScoped<IAutorRepository, AutorRepository>();
@@ -61,7 +59,7 @@ namespace Libreria.Api
             builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
 
             // =====================================
-            // ⚙️ Servicios (Lógica de negocio)
+            // Servicios (Lógica de negocio)
             // =====================================
             builder.Services.AddScoped<LibroService>();
             builder.Services.AddScoped<AutorService>();
@@ -69,19 +67,19 @@ namespace Libreria.Api
             builder.Services.AddScoped<FacturaService>();
 
             // =====================================
-            // 🚀 Construcción de la aplicación
+            // Construcción de la aplicación
             // =====================================
             var app = builder.Build();
 
             // =====================================
-            // 🌐 Middleware
+            // Middleware
             // =====================================
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();
 
             // =====================================
-            // ▶️ Ejecutar la aplicación
+            //  Ejecutar la aplicación
             // =====================================
             app.Run();
         }
