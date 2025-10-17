@@ -51,14 +51,14 @@ namespace Libreria.Core.Services
                 if (libro == null)
                     throw new Exception($"El libro con ID {detalle.LibroId} no existe.");
 
-                total += detalle.PrecioUnitario * detalle.Cantidad;  // ✅ todo en decimal
+                total += detalle.PrecioUnitario * detalle.Cantidad;  
 
-                // Reducir stock
+                
                 libro.Stock -= detalle.Cantidad;
                 await _libroRepository.UpdateAsync(libro);
             }
 
-            factura.Total = total;              // ✅ ahora ambos son decimal
+            factura.Total = total;              
             factura.Fecha = DateTime.Now;
 
             await _facturaRepository.AddAsync(factura);
