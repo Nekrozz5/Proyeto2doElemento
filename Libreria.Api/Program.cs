@@ -17,7 +17,7 @@ namespace Libreria.Api
             var builder = WebApplication.CreateBuilder(args);
 
             // =====================================
-            // 🧱 Controladores y Validadores
+            //  Controladores y Validadores
             // =====================================
             builder.Services.AddControllers()
                 .AddFluentValidation(config =>
@@ -37,7 +37,7 @@ namespace Libreria.Api
                 });
 
             // =====================================
-            // 🗄️ Base de datos MySQL
+            //  Base de datos 
             // =====================================
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(
@@ -47,42 +47,34 @@ namespace Libreria.Api
                 )
             );
 
-            // =====================================
-            // 🔁 AutoMapper
-            // =====================================
+            //  AutoMapper
+
             builder.Services.AddAutoMapper(typeof(MappingProfile));
 
-            // =====================================
-            // 🧩 Repositorios
-            // =====================================
+            // Repositorios
+
             builder.Services.AddScoped<ILibroRepository, LibroRepository>();
             builder.Services.AddScoped<IAutorRepository, AutorRepository>();
             builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
             builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
 
-            // =====================================
-            // ⚙️ Servicios (Lógica de negocio)
-            // =====================================
+            // Servicios (Lógica de negocio
+
             builder.Services.AddScoped<LibroService>();
             builder.Services.AddScoped<AutorService>();
             builder.Services.AddScoped<ClienteService>();
             builder.Services.AddScoped<FacturaService>();
 
-            // =====================================
-            // 🚀 Construcción de la aplicación
-            // =====================================
-            var app = builder.Build();
+            // dapper
 
-            // =====================================
-            // 🌐 Middleware
-            // =====================================
+            builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
+            builder.Services.AddScoped<IDapperContext, DapperContext>();
+
+
+            var app = builder.Build();
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();
-
-            // =====================================
-            // ▶️ Ejecutar la aplicación
-            // =====================================
             app.Run();
         }
     }

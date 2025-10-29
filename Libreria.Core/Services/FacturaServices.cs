@@ -42,14 +42,14 @@ namespace Libreria.Core.Services
                 throw new Exception("El cliente no existe.");
 
             // Calcula total de factura
-            double total = 0;
+            decimal total = 0;
             foreach (var detalle in factura.DetalleFacturas)
             {
                 var libro = await _libroRepository.GetByIdAsync(detalle.LibroId);
                 if (libro == null)
                     throw new Exception($"El libro con ID {detalle.LibroId} no existe.");
 
-                total += (double)(detalle.PrecioUnitario * detalle.Cantidad);
+                total += (decimal)(detalle.PrecioUnitario * detalle.Cantidad);
 
                 // Opcional: reducir stock
                 libro.Stock -= detalle.Cantidad;
