@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 
 namespace Libreria.Infrastructure.DTOs.Factura
 {
-    public class FacturaCreateDTO
+    public class DetalleFacturaCreateDTO
     {
-        public int ClienteId { get; set; }
-        public List<DetalleFacturaCreateDTO> Detalles { get; set; } = new();
+        public int LibroId { get; set; }
+        public int Cantidad { get; set; }
+
+       
     }
 }

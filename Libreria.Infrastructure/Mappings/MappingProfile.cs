@@ -21,7 +21,9 @@ namespace Libreria.Infrastructure.Mappings
         {
             // 📚 LIBRO
             CreateMap<Libro, LibroDto>()
-                .ForMember(dest => dest.AutorNombre, opt => opt.MapFrom(src => src.Autor.Nombre));
+    .ForMember(dest => dest.AutorNombre,
+        opt => opt.MapFrom(src => src.Autor.Nombre + " " + src.Autor.Apellido));
+
             CreateMap<LibroCreateDto, Libro>();
             CreateMap<LibroUpdateDto, Libro>();
 
@@ -37,14 +39,30 @@ namespace Libreria.Infrastructure.Mappings
 
             // 🧾 FACTURA
             CreateMap<Factura, FacturaDTO>()
-                .ForMember(dest => dest.ClienteNombre, opt => opt.MapFrom(src => src.Cliente.Nombre))
-                .ForMember(dest => dest.Detalles, opt => opt.MapFrom(src => src.DetalleFacturas));
-            CreateMap<FacturaCreateDTO, Factura>();
+            .ForMember(dest => dest.ClienteNombre,
+                opt => opt.MapFrom(src => src.Cliente.Nombre + " " + src.Cliente.Apellido))
+            .ForMember(dest => dest.Detalles,
+                opt => opt.MapFrom(src => src.DetalleFacturas));
+            CreateMap<FacturaCreateDTO, Factura>()
+    .ForMember(dest => dest.DetalleFacturas,
+        opt => opt.MapFrom(src => src.Detalles));
+
             CreateMap<FacturaUpdateDTO, Factura>();
 
             // 🧩 DETALLE FACTURA
             CreateMap<DetalleFactura, DetalleFacturaDTO>()
-                .ForMember(dest => dest.LibroTitulo, opt => opt.MapFrom(src => src.Libro.Titulo));
+             .ForMember(dest => dest.LibroTitulo,
+                 opt => opt.MapFrom(src => src.Libro.Titulo))
+             .ForMember(dest => dest.LibroPrecio,
+                 opt => opt.MapFrom(src => src.Libro.Precio));
+          
+
+            CreateMap<DetalleFacturaCreateDTO, DetalleFactura>();
+
+            CreateMap<FacturaCreateDTO, Factura>()
+                .ForMember(dest => dest.DetalleFacturas,
+                    opt => opt.MapFrom(src => src.Detalles));
+
         }
     }
 }

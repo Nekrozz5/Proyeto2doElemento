@@ -9,10 +9,11 @@ namespace Libreria.Infrastructure.DTOs.DetalleFactura
     public class DetalleFacturaDTO
     {
         public int Id { get; set; }
-        public int LibroId { get; set; }
-        public string LibroTitulo { get; set; } = string.Empty;
         public int Cantidad { get; set; }
         public decimal PrecioUnitario { get; set; }
-        public decimal Subtotal => Cantidad * PrecioUnitario;
+        public decimal Subtotal { get; set; }
+
+        public string LibroTitulo { get; set; } = string.Empty;
+        public decimal LibroPrecio { get; set; }
     }
 }

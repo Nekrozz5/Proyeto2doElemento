@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Libreria.Core.Entities;
-using Libreria.Core.Interfaces;
+using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,49 +10,67 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class FacturaController : ControllerBase
     {
-        private readonly IFacturaRepository _repo;
+        private readonly FacturaService _facturaService;
         private readonly IMapper _mapper;
 
-        public FacturaController(IFacturaRepository repo, IMapper mapper)
+        public FacturaController(FacturaService facturaService, IMapper mapper)
         {
-            _repo = repo;
+            _facturaService = facturaService;
             _mapper = mapper;
         }
 
+        // ✅ Obtener todas las facturas (con cliente y detalles)
         [HttpGet]
         public async Task<ActionResult<IEnumerable<FacturaDTO>>> GetAll()
         {
-            var facturas = await _repo.GetAllAsync();
-            return Ok(_mapper.Map<IEnumerable<FacturaDTO>>(facturas));
+            var facturas = await _facturaService.GetAllAsync();
+            var facturasDto = _mapper.Map<IEnumerable<FacturaDTO>>(facturas);
+            return Ok(facturasDto);
         }
 
+        // ✅ Obtener una factura por ID
         [HttpGet("{id}")]
         public async Task<ActionResult<FacturaDTO>> GetById(int id)
         {
-            var factura = await _repo.GetByIdAsync(id);
-            if (factura == null) return NotFound();
+            var factura = await _facturaService.GetByIdAsync(id);
+            if (factura == null)
+                return NotFound();
 
-            return Ok(_mapper.Map<FacturaDTO>(factura));
+            var facturaDto = _mapper.Map<FacturaDTO>(factura);
+            return Ok(facturaDto);
         }
 
+        // ✅ Crear una nueva factura (guarda cliente + detalles + total)
         [HttpPost]
         public async Task<ActionResult> Create(FacturaCreateDTO dto)
         {
-            var factura = _mapper.Map<Factura>(dto);
-            factura.Fecha = DateTime.Now;
+            try
+            {
+                var factura = _mapper.Map<Factura>(dto);
+                await _facturaService.AddAsync(factura);
 
-            await _repo.AddAsync(factura);
-            return CreatedAtAction(nameof(GetById), new { id = factura.Id }, _mapper.Map<FacturaDTO>(factura));
+                var facturaDto = _mapper.Map<FacturaDTO>(factura);
+                return CreatedAtAction(nameof(GetById), new { id = factura.Id }, facturaDto);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
+        // ✅ Eliminar una factura
         [HttpDelete("{id}")]
         public async Task<ActionResult> Delete(int id)
         {
-            var factura = await _repo.GetByIdAsync(id);
-            if (factura == null) return NotFound();
-
-            await _repo.DeleteAsync(factura);
-            return NoContent();
+            try
+            {
+                await _facturaService.DeleteAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

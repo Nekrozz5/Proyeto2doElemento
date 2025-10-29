@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Libreria.Core.Entities
 {
-    public partial class Cliente
+    public  class Cliente
     {
         public int Id { get; set; }
         public string Nombre { get; set; } = string.Empty;

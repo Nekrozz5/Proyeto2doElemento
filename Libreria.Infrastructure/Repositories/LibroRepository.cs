@@ -19,11 +19,19 @@ namespace Libreria.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Libro>> GetAllAsync() =>
-            await _context.Libros.ToListAsync();
+        public async Task<IEnumerable<Libro>> GetAllAsync()
+        {
+            return await _context.Libros
+                .Include(l => l.Autor) 
+                .ToListAsync();
+        }
 
-        public async Task<Libro?> GetByIdAsync(int id) =>
-            await _context.Libros.FindAsync(id);
+        public async Task<Libro?> GetByIdAsync(int id)
+        {
+            return await _context.Libros
+                .Include(l => l.Autor)
+                .FirstOrDefaultAsync(l => l.Id == id);
+        }
 
         public async Task AddAsync(Libro libro)
         {
@@ -43,7 +51,12 @@ namespace Libreria.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<Libro>> GetLibrosPorAutorAsync(int autorId) =>
-            await _context.Libros.Where(l => l.AutorId == autorId).ToListAsync();
+        public async Task<IEnumerable<Libro>> GetLibrosPorAutorAsync(int autorId)
+        {
+            return await _context.Libros
+                .Include(l => l.Autor)
+                .Where(l => l.AutorId == autorId)
+                .ToListAsync();
+        }
     }
 }
