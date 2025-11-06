@@ -41,7 +41,7 @@ namespace Libreria.Api
             // =====================================
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseMySql(
-                    builder.Configuration.GetConnectionString("MySqlConnection"),
+                    builder.Configuration.GetConnectionString("ConnectionMySql"),
                     new MySqlServerVersion(new Version(8, 0, 36)),
                     b => b.MigrationsAssembly("Libreria.Api")
                 )
@@ -70,8 +70,29 @@ namespace Libreria.Api
             builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
             builder.Services.AddScoped<IDapperContext, DapperContext>();
 
+            //Configuracion de Swagger
+            builder.Services.AddEndpointsApiExplorer();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new()
+                {
+                    Title = "Backend Libreria API",
+                    Version = "v1",
+                    Description = "Documentacion de la API de Libreria - NET 9",
+                    Contact = new()
+                    {
+                        Name = "Equipo de Desarrollo UCB",
+                        Email = "desarrollo@ucb.edu.bo"
+                    }
+                });
+            });
+
 
             var app = builder.Build();
+            if (app.Environment.IsDevelopment())
+            {
+                app.UseSwagger();
+            } 
             app.UseHttpsRedirection();
             app.UseAuthorization();
             app.MapControllers();
