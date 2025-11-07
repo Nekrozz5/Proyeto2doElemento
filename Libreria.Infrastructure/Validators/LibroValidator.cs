@@ -1,20 +1,14 @@
 ﻿using FluentValidation;
 using Libreria.Infrastructure.DTOs.Libro;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Libreria.Infrastructure.Validators
 {
-    public class LibroCreateValidator : AbstractValidator<LibroCreateDto>
+    public class LibroValidator : AbstractValidator<LibroCreateDto>
     {
-        public LibroCreateValidator()
+        public LibroValidator()
         {
             RuleFor(x => x.Titulo)
-                .NotEmpty().WithMessage("El título del libro es obligatorio.")
-                .MaximumLength(150);
+                .NotEmpty().WithMessage("El título es obligatorio.");
 
             RuleFor(x => x.Descripcion)
                 .NotEmpty().WithMessage("La descripción es obligatoria.");

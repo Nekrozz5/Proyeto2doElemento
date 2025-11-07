@@ -1,8 +1,7 @@
-﻿using AutoMapper;
-using Libreria.Core.Entities;
-using Libreria.Core.Services;
-using Libreria.Infrastructure.DTOs.Factura;
+﻿using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Libreria.Core.Services;
+using Libreria.Core.Entities;
 
 namespace Libreria.Api.Controllers
 {
@@ -10,46 +9,52 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class FacturaController : ControllerBase
     {
-        private readonly FacturaService _service;
-        private readonly IMapper _mapper;
-        public FacturaController(FacturaService service, IMapper mapper)
+        private readonly FacturaService _facturaService;
+
+        public FacturaController(FacturaService facturaService)
         {
-            _service = service;
-            _mapper = mapper;
+            _facturaService = facturaService;
         }
 
+        // GET: api/Factura
         [HttpGet]
-        public IActionResult Get() => Ok(_service.GetAll());
+        public async Task<IActionResult> GetAll()
+        {
+            var facturas = await _facturaService.GetAllAsync(); // <-- usar Async
+            return Ok(facturas);
+        }
 
+        // GET: api/Factura/5
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var entity = await _service.GetByIdAsync(id);
-            return entity is null ? NotFound() : Ok(entity);
+            var factura = await _facturaService.GetByIdAsync(id);
+            if (factura is null) return NotFound();
+            return Ok(factura);
         }
 
+        // POST: api/Factura
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] FacturaCreateDTO dto)
+        public async Task<IActionResult> Create([FromBody] Factura factura)
         {
-            var entity = _mapper.Map<Factura>(dto);
-            await _service.AddAsync(entity);
-            return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+            await _facturaService.AddAsync(factura);
+            return CreatedAtAction(nameof(GetById), new { id = factura.Id }, factura);
         }
 
+        // PUT: api/Factura/5
         [HttpPut("{id:int}")]
-        public async Task<IActionResult> Put(int id, [FromBody] FacturaUpdateDTO dto)
+        public async Task<IActionResult> Update(int id, [FromBody] Factura factura)
         {
-            var existing = await _service.GetByIdAsync(id);
-            if (existing is null) return NotFound();
-            _mapper.Map(dto, existing);
-            await _service.UpdateAsync(existing);
+            if (id != factura.Id) return BadRequest("El id de la URL no coincide con el del cuerpo.");
+            await _facturaService.UpdateAsync(factura);
             return NoContent();
         }
 
+        // DELETE: api/Factura/5
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
+            await _facturaService.DeleteAsync(id);
             return NoContent();
         }
     }

@@ -39,6 +39,17 @@ builder.Services.AddScoped<ClienteService>();
 builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<DetalleFacturaService>();
 
+// Repositories (inyección de dependencias)
+builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
+builder.Services.AddScoped<ILibroRepository, LibroRepository>();
+builder.Services.AddScoped<IAutorRepository, AutorRepository>();
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IDetalleFacturaRepository, DetalleFacturaRepository>();
+
+// Unit of Work (si usas)
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+
 // MVC + FluentValidation
 builder.Services.AddControllers()
     .AddNewtonsoftJson();

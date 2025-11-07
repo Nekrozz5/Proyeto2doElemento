@@ -27,7 +27,7 @@ namespace Libreria.Infrastructure.Repositories
             return await _context.Facturas.FindAsync(id);
         }
 
-        // === Nuevas implementaciones, coherentes con el servicio ===
+        // === Implementaciones nuevas, coherentes con el servicio ===
         public async Task UpdateAsync(Factura factura)
         {
             _context.Facturas.Update(factura);

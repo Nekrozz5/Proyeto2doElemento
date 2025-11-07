@@ -12,7 +12,7 @@ namespace Libreria.Core.Interfaces
         // Obtener todas las facturas sin incluir relaciones
         Task<IEnumerable<Factura>> GetAllAsync();
 
-        // === Firmas que usa tu FacturaService ===
+        // === Firmas usadas por FacturaService ===
         Task UpdateAsync(Factura factura);
         Task DeleteAsync(Factura factura);
 
