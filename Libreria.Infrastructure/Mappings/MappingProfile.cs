@@ -34,14 +34,20 @@ namespace Libreria.Infrastructure.Mappings
             CreateMap<DetalleFactura, DetalleFacturaDTO>()
                 .ForMember(d => d.LibroTitulo, o => o.MapFrom(s => s.Libro.Titulo))
                 .ForMember(d => d.LibroPrecio, o => o.MapFrom(s => s.Libro.Precio));
-            CreateMap<DetalleFacturaCreateDTO, DetalleFactura>();
+            CreateMap<DetalleFacturaCreateDTO, DetalleFactura>()
+    .ForMember(dest => dest.PrecioUnitario, opt => opt.Ignore()) // <- lo calculamos en el servicio
+    .ForMember(dest => dest.Subtotal, opt => opt.Ignore())       // <- idem
+    .ReverseMap();
+
 
             // Factura
             CreateMap<Factura, FacturaDTO>()
                 .ForMember(d => d.ClienteNombre, o => o.MapFrom(s => s.Cliente.Nombre + " " + s.Cliente.Apellido))
                 .ForMember(d => d.Detalles, o => o.MapFrom(s => s.DetalleFacturas));
             CreateMap<FacturaCreateDTO, Factura>()
-                .ForMember(d => d.DetalleFacturas, o => o.MapFrom(s => s.Detalles));
+    .ForMember(dest => dest.Total, opt => opt.Ignore()) // <- lo calculamos en el servicio
+    .ForMember(dest => dest.DetalleFacturas, opt => opt.MapFrom(src => src.Detalles))
+    .ReverseMap();
             CreateMap<FacturaUpdateDTO, Factura>();
         }
     }

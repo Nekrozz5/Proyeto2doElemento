@@ -44,12 +44,12 @@ namespace Libreria.Core.Services
             foreach (var df in factura.DetalleFacturas)
             {
                 var libro = await _libroRepository.GetByIdAsync(df.LibroId);
-                if (libro == null) throw new Exception($"Libro {df.LibroId} no existe.");
+                if (libro == null)
+                    throw new Exception($"Libro {df.LibroId} no encontrado");
 
                 df.PrecioUnitario = libro.Precio;
-                df.Subtotal = df.Cantidad * df.PrecioUnitario;
+                df.Subtotal = df.Cantidad * libro.Precio;
 
-                // Actualiza stock (si tu patrón actual lo hace aquí)
                 libro.Stock -= df.Cantidad;
                 await _libroRepository.UpdateAsync(libro);
 
@@ -57,8 +57,7 @@ namespace Libreria.Core.Services
             }
 
             factura.Total = total;
-
-            await _facturaRepository.AddAsync(factura); // tu repo ya guarda (fix anterior)
+            await _facturaRepository.AddAsync(factura);
         }
 
 
