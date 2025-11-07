@@ -53,6 +53,8 @@ builder.Services.AddControllers()
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LibroValidator>();
 
+
+
 // 🔹 SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -68,5 +70,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
+app.UseMiddleware<Libreria.Api.Middlewares.GlobalExceptionMiddleware>();
+
 app.MapControllers();
 app.Run();

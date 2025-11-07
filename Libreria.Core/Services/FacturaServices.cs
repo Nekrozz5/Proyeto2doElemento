@@ -1,4 +1,5 @@
 ﻿using Libreria.Core.Entities;
+using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,12 +19,18 @@ namespace Libreria.Core.Services
         // ======================
         public IEnumerable<Factura> GetAll()
         {
-            return _unitOfWork.Facturas
+            var facturas = _unitOfWork.Facturas
                 .GetAll()
                 .AsQueryable()
                 .Include(f => f.Cliente)
                 .Include(f => f.DetalleFacturas)
-                    .ThenInclude(df => df.Libro);
+                    .ThenInclude(df => df.Libro)
+                .ToList();
+
+            if (facturas == null || !facturas.Any())
+                throw new NotFoundException("No se encontraron facturas registradas.");
+
+            return facturas;
         }
 
         // ======================
@@ -31,13 +38,18 @@ namespace Libreria.Core.Services
         // ======================
         public async Task<Factura?> GetByIdAsync(int id)
         {
-            return await _unitOfWork.Facturas
+            var factura = await _unitOfWork.Facturas
                 .GetAll()
                 .AsQueryable()
                 .Include(f => f.Cliente)
                 .Include(f => f.DetalleFacturas)
                     .ThenInclude(df => df.Libro)
                 .FirstOrDefaultAsync(f => f.Id == id);
+
+            if (factura == null)
+                throw new NotFoundException($"No se encontró la factura con ID {id}.");
+
+            return factura;
         }
 
         // ======================
@@ -45,18 +57,30 @@ namespace Libreria.Core.Services
         // ======================
         public async Task AddAsync(Factura factura)
         {
+            if (factura.ClienteId <= 0)
+                throw new DomainValidationException("Debe especificar un cliente válido para la factura.");
+
+            if (factura.DetalleFacturas == null || !factura.DetalleFacturas.Any())
+                throw new DomainValidationException("La factura debe tener al menos un detalle.");
+
             // Buscar cliente
             var cliente = await _unitOfWork.Clientes.GetById(factura.ClienteId);
             if (cliente == null)
-                throw new Exception("Cliente no encontrado.");
+                throw new NotFoundException("Cliente no encontrado.");
 
-            // Calcular total y actualizar stock
             decimal total = 0;
+
             foreach (var detalle in factura.DetalleFacturas)
             {
                 var libro = await _unitOfWork.Libros.GetById(detalle.LibroId);
                 if (libro == null)
-                    throw new Exception($"Libro con ID {detalle.LibroId} no encontrado.");
+                    throw new NotFoundException($"Libro con ID {detalle.LibroId} no encontrado.");
+
+                if (detalle.Cantidad <= 0)
+                    throw new DomainValidationException("La cantidad del detalle debe ser mayor a cero.");
+
+                if (libro.Stock < detalle.Cantidad)
+                    throw new BusinessRuleException($"El libro '{libro.Titulo}' no tiene stock suficiente. Disponible: {libro.Stock}.");
 
                 detalle.PrecioUnitario = libro.Precio;
                 detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario;
@@ -70,6 +94,9 @@ namespace Libreria.Core.Services
             factura.Fecha = DateTime.Now;
             factura.Total = total;
 
+            if (factura.Total <= 0)
+                throw new BusinessRuleException("El total de la factura debe ser mayor que cero.");
+
             await _unitOfWork.Facturas.Add(factura);
             await _unitOfWork.SaveChangesAsync();
         }
@@ -79,6 +106,9 @@ namespace Libreria.Core.Services
         // ======================
         public void Update(Factura factura)
         {
+            if (factura.Id <= 0)
+                throw new DomainValidationException("Debe especificar un ID válido para actualizar la factura.");
+
             _unitOfWork.Facturas.Update(factura);
             _unitOfWork.SaveChanges();
         }
@@ -88,6 +118,10 @@ namespace Libreria.Core.Services
         // ======================
         public async Task DeleteAsync(int id)
         {
+            var factura = await _unitOfWork.Facturas.GetById(id);
+            if (factura == null)
+                throw new NotFoundException($"No se puede eliminar: la factura con ID {id} no existe.");
+
             await _unitOfWork.Facturas.Delete(id);
             await _unitOfWork.SaveChangesAsync();
         }

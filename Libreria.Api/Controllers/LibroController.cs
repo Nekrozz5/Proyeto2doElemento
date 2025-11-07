@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using Libreria.Core.Entities;
+using Libreria.Core.QueryFilters;
+using Libreria.Core.Responses;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Libro;
 using Microsoft.AspNetCore.Mvc;
@@ -86,6 +88,17 @@ namespace Libreria.Api.Controllers
         {
             await _libroService.DeleteAsync(id);
             return Ok("Libro eliminado correctamente.");
+        }
+
+
+        // libro filter
+
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetFiltered([FromQuery] LibroQueryFilter filters)
+        {
+            var libros = await _libroService.GetFilteredAsync(filters);
+            return Ok(new ApiResponse<object>(libros, "Libros filtrados correctamente."));
         }
     }
 }
