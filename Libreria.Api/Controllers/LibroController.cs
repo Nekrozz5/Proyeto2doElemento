@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 using Libreria.Core.Entities;
-using Libreria.Core.Interfaces;
+using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Libro;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,64 +10,46 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class LibroController : ControllerBase
     {
-        private readonly ILibroRepository _repo;
+        private readonly LibroService _service;
         private readonly IMapper _mapper;
-
-        public LibroController(ILibroRepository repo, IMapper mapper)
+        public LibroController(LibroService service, IMapper mapper)
         {
-            _repo = repo;
+            _service = service;
             _mapper = mapper;
         }
 
-        // ✅ GET: api/libro
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<LibroDto>>> GetAll()
+        public IActionResult Get() => Ok(_service.GetAll());
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> Get(int id)
         {
-            var libros = await _repo.GetAllAsync();
-            var dto = _mapper.Map<IEnumerable<LibroDto>>(libros);
-            return Ok(dto);
+            var entity = await _service.GetByIdAsync(id);
+            return entity is null ? NotFound() : Ok(entity);
         }
 
-        // ✅ GET: api/libro/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<LibroDto>> GetById(int id)
-        {
-            var libro = await _repo.GetByIdAsync(id);
-            if (libro == null) return NotFound();
-
-            var dto = _mapper.Map<LibroDto>(libro);
-            return Ok(dto);
-        }
-
-        // ✅ POST: api/libro
         [HttpPost]
-        public async Task<ActionResult> Create(LibroCreateDto dto)
+        public async Task<IActionResult> Post([FromBody] LibroCreateDto dto)
         {
-            var libro = _mapper.Map<Libro>(dto);
-            await _repo.AddAsync(libro);
-            return CreatedAtAction(nameof(GetById), new { id = libro.Id }, _mapper.Map<LibroDto>(libro));
+            var entity = _mapper.Map<Libro>(dto);
+            await _service.AddAsync(entity);
+            return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
         }
 
-        // ✅ PUT: api/libro/5
-        [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, LibroUpdateDto dto)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Put(int id, [FromBody] LibroUpdateDto dto)
         {
-            var libro = await _repo.GetByIdAsync(id);
-            if (libro == null) return NotFound();
-
-            _mapper.Map(dto, libro);
-            await _repo.UpdateAsync(libro);
+            var existing = await _service.GetByIdAsync(id);
+            if (existing is null) return NotFound();
+            _mapper.Map(dto, existing);
+            await _service.UpdateAsync(existing);
             return NoContent();
         }
 
-        // ✅ DELETE: api/libro/5
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var libro = await _repo.GetByIdAsync(id);
-            if (libro == null) return NotFound();
-
-            await _repo.DeleteAsync(libro);
+            await _service.DeleteAsync(id);
             return NoContent();
         }
     }

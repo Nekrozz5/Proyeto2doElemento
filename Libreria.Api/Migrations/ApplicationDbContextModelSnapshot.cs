@@ -22,6 +22,41 @@ namespace Libreria.Api.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("DetalleFactura", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Cantidad")
+                        .HasColumnType("int");
+
+                    b.Property<int>("FacturaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("LibroId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PrecioUnitario")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FacturaId");
+
+                    b.HasIndex("LibroId");
+
+                    b.ToTable("DetalleFacturas");
+                });
+
             modelBuilder.Entity("Libreria.Core.Entities.Autor", b =>
                 {
                     b.Property<int>("Id")
@@ -33,6 +68,12 @@ namespace Libreria.Api.Migrations
                     b.Property<string>("Apellido")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime(6)");
 
                     b.Property<string>("Nombre")
                         .IsRequired()
@@ -59,6 +100,12 @@ namespace Libreria.Api.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime(6)");
+
                     b.Property<string>("Nombre")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -66,35 +113,6 @@ namespace Libreria.Api.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Clientes");
-                });
-
-            modelBuilder.Entity("Libreria.Core.Entities.DetalleFactura", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    MySqlPropertyBuilderExtensions.UseMySqlIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Cantidad")
-                        .HasColumnType("int");
-
-                    b.Property<int>("FacturaId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("LibroId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("PrecioUnitario")
-                        .HasColumnType("decimal(65,30)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("FacturaId");
-
-                    b.HasIndex("LibroId");
-
-                    b.ToTable("DetalleFacturas");
                 });
 
             modelBuilder.Entity("Libreria.Core.Entities.Factura", b =>
@@ -109,6 +127,12 @@ namespace Libreria.Api.Migrations
                         .HasColumnType("int");
 
                     b.Property<DateTime>("Fecha")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaRegistro")
                         .HasColumnType("datetime(6)");
 
                     b.Property<decimal>("Total")
@@ -139,8 +163,14 @@ namespace Libreria.Api.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
-                    b.Property<double>("Precio")
-                        .HasColumnType("double");
+                    b.Property<DateTime?>("FechaActualizacion")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("Precio")
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<int>("Stock")
                         .HasColumnType("int");
@@ -156,7 +186,7 @@ namespace Libreria.Api.Migrations
                     b.ToTable("Libros");
                 });
 
-            modelBuilder.Entity("Libreria.Core.Entities.DetalleFactura", b =>
+            modelBuilder.Entity("DetalleFactura", b =>
                 {
                     b.HasOne("Libreria.Core.Entities.Factura", "Factura")
                         .WithMany("DetalleFacturas")

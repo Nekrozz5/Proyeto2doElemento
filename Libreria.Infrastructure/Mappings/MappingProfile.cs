@@ -1,13 +1,7 @@
-﻿
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using AutoMapper;
+﻿using AutoMapper;
 using Libreria.Core.Entities;
 using Libreria.Infrastructure.DTOs.Autor;
-using Libreria.Infrastructure.DTOs.Autor.Libreria.Api.DTOs.Autor;
+
 using Libreria.Infrastructure.DTOs.Cliente;
 using Libreria.Infrastructure.DTOs.DetalleFactura;
 using Libreria.Infrastructure.DTOs.Factura;
@@ -19,51 +13,36 @@ namespace Libreria.Infrastructure.Mappings
     {
         public MappingProfile()
         {
-            // 📚 LIBRO
+            // Libro
             CreateMap<Libro, LibroDto>()
-    .ForMember(dest => dest.AutorNombre,
-        opt => opt.MapFrom(src => src.Autor.Nombre + " " + src.Autor.Apellido));
-
+                .ForMember(d => d.AutorNombre, o => o.MapFrom(s => s.Autor != null ? (s.Autor.Nombre + " " + s.Autor.Apellido) : string.Empty));
             CreateMap<LibroCreateDto, Libro>();
             CreateMap<LibroUpdateDto, Libro>();
 
-            // ✍️ AUTOR
-            CreateMap<Autor, AutorDTO>();
+            // Autor
+            CreateMap<Autor, AutorDTO>()
+                .ForMember(d => d.Libros, o => o.MapFrom(s => s.Libros));
             CreateMap<AutorCreateDto, Autor>();
             CreateMap<AutorUpdateDto, Autor>();
 
-            // 👤 CLIENTE
+            // Cliente
             CreateMap<Cliente, ClienteDto>();
             CreateMap<ClienteCreateDto, Cliente>();
             CreateMap<ClienteUpdateDto, Cliente>();
 
-            // 🧾 FACTURA
-            CreateMap<Factura, FacturaDTO>()
-            .ForMember(dest => dest.ClienteNombre,
-                opt => opt.MapFrom(src => src.Cliente.Nombre + " " + src.Cliente.Apellido))
-            .ForMember(dest => dest.Detalles,
-                opt => opt.MapFrom(src => src.DetalleFacturas));
-            CreateMap<FacturaCreateDTO, Factura>()
-    .ForMember(dest => dest.DetalleFacturas,
-        opt => opt.MapFrom(src => src.Detalles));
-
-            CreateMap<FacturaUpdateDTO, Factura>();
-
-            // 🧩 DETALLE FACTURA
+            // DetalleFactura
             CreateMap<DetalleFactura, DetalleFacturaDTO>()
-             .ForMember(dest => dest.LibroTitulo,
-                 opt => opt.MapFrom(src => src.Libro.Titulo))
-             .ForMember(dest => dest.LibroPrecio,
-                 opt => opt.MapFrom(src => src.Libro.Precio));
-          
-
+                .ForMember(d => d.LibroTitulo, o => o.MapFrom(s => s.Libro.Titulo))
+                .ForMember(d => d.LibroPrecio, o => o.MapFrom(s => s.Libro.Precio));
             CreateMap<DetalleFacturaCreateDTO, DetalleFactura>();
 
+            // Factura
+            CreateMap<Factura, FacturaDTO>()
+                .ForMember(d => d.ClienteNombre, o => o.MapFrom(s => s.Cliente.Nombre + " " + s.Cliente.Apellido))
+                .ForMember(d => d.Detalles, o => o.MapFrom(s => s.DetalleFacturas));
             CreateMap<FacturaCreateDTO, Factura>()
-                .ForMember(dest => dest.DetalleFacturas,
-                    opt => opt.MapFrom(src => src.Detalles));
-
+                .ForMember(d => d.DetalleFacturas, o => o.MapFrom(s => s.Detalles));
+            CreateMap<FacturaUpdateDTO, Factura>();
         }
     }
 }
-

@@ -1,25 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Libreria.Core.Entities
+﻿namespace Libreria.Core.Entities
 {
-       public class Factura
+    public class Factura : BaseEntity
     {
-        public int Id { get; set; }
         public int ClienteId { get; set; }
+        public Cliente Cliente { get; set; } = null!;
         public DateTime Fecha { get; set; }
         public decimal Total { get; set; }
 
-        public virtual Cliente Cliente { get; set; } = null!;
-        public virtual ICollection<DetalleFactura> DetalleFacturas { get; set; } = new List<DetalleFactura>();
+        public ICollection<DetalleFactura> DetalleFacturas { get; set; } = new List<DetalleFactura>();
     }
-
 }
-
-
-
-    
-

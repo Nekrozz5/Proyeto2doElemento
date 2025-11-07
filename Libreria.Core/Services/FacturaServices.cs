@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-
 using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
 
@@ -41,7 +38,6 @@ namespace Libreria.Core.Services
             if (cliente == null)
                 throw new Exception("El cliente no existe.");
 
-            // Calcula total de factura
             decimal total = 0;
             foreach (var detalle in factura.DetalleFacturas)
             {
@@ -49,9 +45,8 @@ namespace Libreria.Core.Services
                 if (libro == null)
                     throw new Exception($"El libro con ID {detalle.LibroId} no existe.");
 
-                total += (decimal)(detalle.PrecioUnitario * detalle.Cantidad);
+                total += detalle.PrecioUnitario * detalle.Cantidad;
 
-                // Opcional: reducir stock
                 libro.Stock -= detalle.Cantidad;
                 await _libroRepository.UpdateAsync(libro);
             }
@@ -60,6 +55,11 @@ namespace Libreria.Core.Services
             factura.Fecha = DateTime.Now;
 
             await _facturaRepository.AddAsync(factura);
+        }
+
+        public async Task UpdateAsync(Factura factura)
+        {
+            await _facturaRepository.UpdateAsync(factura);
         }
 
         public async Task DeleteAsync(int id)

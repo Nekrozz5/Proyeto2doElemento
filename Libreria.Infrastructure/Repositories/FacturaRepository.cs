@@ -1,8 +1,5 @@
-﻿
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
@@ -11,41 +8,26 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Libreria.Infrastructure.Repositories
 {
-    public class FacturaRepository : IFacturaRepository
+    public class FacturaRepository : BaseRepository<Factura>, IFacturaRepository
     {
         private readonly ApplicationDbContext _context;
 
-        public FacturaRepository(ApplicationDbContext context)
+        public FacturaRepository(ApplicationDbContext context) : base(context)
         {
             _context = context;
         }
 
         public async Task<IEnumerable<Factura>> GetAllAsync()
         {
-            return await _context.Facturas
-                .Include(f => f.Cliente)
-                .Include(f => f.DetalleFacturas)    
-                    .ThenInclude(d => d.Libro)
-                .ToListAsync();
+            return await _context.Facturas.ToListAsync();
         }
-
 
         public async Task<Factura?> GetByIdAsync(int id)
         {
-            return await _context.Facturas
-                .Include(f => f.Cliente)
-                .Include(f => f.DetalleFacturas)
-                    .ThenInclude(d => d.Libro)
-                .FirstOrDefaultAsync(f => f.Id == id);
+            return await _context.Facturas.FindAsync(id);
         }
 
-        public async Task AddAsync(Factura factura)
-        {
-            _context.Facturas.Add(factura);
-            await _context.SaveChangesAsync();  
-        }
-
-
+        // === Nuevas implementaciones, coherentes con el servicio ===
         public async Task UpdateAsync(Factura factura)
         {
             _context.Facturas.Update(factura);
@@ -57,15 +39,32 @@ namespace Libreria.Infrastructure.Repositories
             _context.Facturas.Remove(factura);
             await _context.SaveChangesAsync();
         }
+        // === fin nuevas implementaciones ===
 
         public async Task<IEnumerable<Factura>> GetFacturasPorClienteAsync(int clienteId)
         {
             return await _context.Facturas
-                .Include(f => f.DetalleFacturas)
-                    .ThenInclude(d => d.Libro)
                 .Where(f => f.ClienteId == clienteId)
+                .Include(f => f.DetalleFacturas)
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<Factura>> GetAllWithDetailsAsync()
+        {
+            return await _context.Facturas
+                .Include(f => f.Cliente)
+                .Include(f => f.DetalleFacturas)
+                .ThenInclude(df => df.Libro)
+                .ToListAsync();
+        }
+
+        public async Task<Factura?> GetByIdWithDetailsAsync(int id)
+        {
+            return await _context.Facturas
+                .Include(f => f.Cliente)
+                .Include(f => f.DetalleFacturas)
+                .ThenInclude(df => df.Libro)
+                .FirstOrDefaultAsync(f => f.Id == id);
+        }
     }
 }

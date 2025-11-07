@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Libreria.Api.Validators
+namespace Libreria.Infrastructure.Validators
 {
     public class ClienteCreateValidator : AbstractValidator<ClienteCreateDto>
     {
