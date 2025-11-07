@@ -1,22 +1,24 @@
-﻿using Libreria.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Libreria.Core.Entities;
 
 namespace Libreria.Core.Interfaces
 {
-    public interface IFacturaRepository
+    public interface IFacturaRepository : IBaseRepository<Factura>
     {
-        Task<IEnumerable<Factura>> GetAllAsync();
+        // Obtener una factura simple por Id (sin relaciones)
         Task<Factura?> GetByIdAsync(int id);
-        Task AddAsync(Factura factura);
+
+        // Obtener todas las facturas sin incluir relaciones
+        Task<IEnumerable<Factura>> GetAllAsync();
+
+        // === Firmas que usa tu FacturaService ===
         Task UpdateAsync(Factura factura);
         Task DeleteAsync(Factura factura);
 
-        // Extra: obtener facturas de un cliente
+        // Consultas con relaciones
         Task<IEnumerable<Factura>> GetFacturasPorClienteAsync(int clienteId);
+        Task<IEnumerable<Factura>> GetAllWithDetailsAsync();
+        Task<Factura?> GetByIdWithDetailsAsync(int id);
     }
-
 }

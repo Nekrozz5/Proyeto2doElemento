@@ -1,102 +1,64 @@
-﻿using Libreria.Infrastructure.Data;
-using Libreria.Infrastructure.Mappings;
-using Libreria.Core.Interfaces;
-using Libreria.Infrastructure.Repositories;
-using Libreria.Core.Services;
-using Microsoft.EntityFrameworkCore;
+﻿using System.Reflection;
 using AutoMapper;
+using FluentValidation;
 using FluentValidation.AspNetCore;
-using Libreria.Api.Validators;
+using Libreria.Core.Interfaces;
+using Libreria.Core.Services;
+using Libreria.Infrastructure.Data;
+using Libreria.Infrastructure.Mappings;
+using Libreria.Infrastructure.Repositories;
+using Libreria.Infrastructure.Validators;
+using Microsoft.EntityFrameworkCore;
 
-namespace Libreria.Api
+var builder = WebApplication.CreateBuilder(args);
+
+// Database
+var provider = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "MySql";
+if (provider.Equals("MySql", StringComparison.OrdinalIgnoreCase))
 {
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // =====================================
-            //  Controladores y Validadores
-            // =====================================
-            builder.Services.AddControllers()
-                .AddFluentValidation(config =>
-                {
-                    config.RegisterValidatorsFromAssemblyContaining<LibroCreateValidator>();
-                })
-                .AddNewtonsoftJson(options =>
-                {
-                    // Evita bucles de referencias en JSON (importante con EF)
-                    options.SerializerSettings.ReferenceLoopHandling =
-                        Newtonsoft.Json.ReferenceLoopHandling.Ignore;
-                })
-                .ConfigureApiBehaviorOptions(options =>
-                {
-                    // Permite manejar manualmente los errores de validación
-                    options.SuppressModelStateInvalidFilter = true;
-                });
-
-            // =====================================
-            //  Base de datos 
-            // =====================================
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseMySql(
-                    builder.Configuration.GetConnectionString("ConnectionMySql"),
-                    new MySqlServerVersion(new Version(8, 0, 36)),
-                    b => b.MigrationsAssembly("Libreria.Api")
-                )
-            );
-
-            //  AutoMapper
-
-            builder.Services.AddAutoMapper(typeof(MappingProfile));
-
-            // Repositorios
-
-            builder.Services.AddScoped<ILibroRepository, LibroRepository>();
-            builder.Services.AddScoped<IAutorRepository, AutorRepository>();
-            builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
-            builder.Services.AddScoped<IFacturaRepository, FacturaRepository>();
-
-            // Servicios (Lógica de negocio
-
-            builder.Services.AddScoped<LibroService>();
-            builder.Services.AddScoped<AutorService>();
-            builder.Services.AddScoped<ClienteService>();
-            builder.Services.AddScoped<FacturaService>();
-
-            // dapper
-
-            builder.Services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
-            builder.Services.AddScoped<IDapperContext, DapperContext>();
-
-            //Configuracion de Swagger
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.SwaggerDoc("v1", new()
-                {
-                    Title = "Backend Libreria API",
-                    Version = "v1",
-                    Description = "Documentacion de la API de Libreria - NET 9",
-                    Contact = new()
-                    {
-                        Name = "Equipo de Desarrollo UCB",
-                        Email = "desarrollo@ucb.edu.bo"
-                    }
-                });
-            });
-
-
-            var app = builder.Build();
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-            } 
-            app.UseHttpsRedirection();
-            app.UseAuthorization();
-            app.MapControllers();
-            app.Run();
-        }
-    }
+    var conn = builder.Configuration.GetConnectionString("ConnectionMySql");
+    builder.Services.AddDbContext<ApplicationDbContext>(opt =>
+        opt.UseMySql(conn, ServerVersion.AutoDetect(conn)));
 }
+else
+{
+    throw new InvalidOperationException("Only MySql is configured in this template.");
+}
+
+// Automapper
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+}, Assembly.GetExecutingAssembly());
+
+// Services & Repositories
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<LibroService>();
+builder.Services.AddScoped<AutorService>();
+builder.Services.AddScoped<ClienteService>();
+builder.Services.AddScoped<FacturaService>();
+builder.Services.AddScoped<DetalleFacturaService>();
+
+// MVC + FluentValidation
+builder.Services.AddControllers()
+    .AddNewtonsoftJson();
+
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddValidatorsFromAssemblyContaining<LibroValidator>();
+
+// Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();

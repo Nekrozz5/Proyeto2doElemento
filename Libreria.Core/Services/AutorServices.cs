@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
 
@@ -11,45 +7,39 @@ namespace Libreria.Core.Services
 {
     public class AutorService
     {
-        private readonly IAutorRepository _autorRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public AutorService(IAutorRepository autorRepository)
+        public AutorService(IUnitOfWork unitOfWork)
         {
-            _autorRepository = autorRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        public async Task<IEnumerable<Autor>> GetAllAsync()
+        public IEnumerable<Autor> GetAll()
         {
-            return await _autorRepository.GetAllAsync();
+            return _unitOfWork.Autores.GetAll();
         }
 
         public async Task<Autor?> GetByIdAsync(int id)
         {
-            return await _autorRepository.GetByIdAsync(id);
+            return await _unitOfWork.Autores.GetById(id);
         }
 
         public async Task AddAsync(Autor autor)
         {
-            // Evita autores duplicados
-            var existentes = await _autorRepository.GetAllAsync();
-            if (existentes.Any(a => a.Nombre == autor.Nombre && a.Apellido == autor.Apellido))
-                throw new Exception("Ya existe un autor con el mismo nombre y apellido.");
-
-            await _autorRepository.AddAsync(autor);
+            await _unitOfWork.Autores.AddAsync(autor);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(Autor autor)
         {
-            await _autorRepository.UpdateAsync(autor);
+            _unitOfWork.Autores.Update(autor);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
-            var autor = await _autorRepository.GetByIdAsync(id);
-            if (autor == null)
-                throw new Exception("El autor no existe.");
-
-            await _autorRepository.DeleteAsync(autor);
+            await _unitOfWork.Autores.DeleteAsync(id);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }

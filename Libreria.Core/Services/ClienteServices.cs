@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
 
@@ -11,45 +7,39 @@ namespace Libreria.Core.Services
 {
     public class ClienteService
     {
-        private readonly IClienteRepository _clienteRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public ClienteService(IClienteRepository clienteRepository)
+        public ClienteService(IUnitOfWork unitOfWork)
         {
-            _clienteRepository = clienteRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        public async Task<IEnumerable<Cliente>> GetAllAsync()
+        public IEnumerable<Cliente> GetAll()
         {
-            return await _clienteRepository.GetAllAsync();
+            return _unitOfWork.Clientes.GetAll();
         }
 
         public async Task<Cliente?> GetByIdAsync(int id)
         {
-            return await _clienteRepository.GetByIdAsync(id);
+            return await _unitOfWork.Clientes.GetById(id);
         }
 
         public async Task AddAsync(Cliente cliente)
         {
-            // Evita correos duplicados
-            var existentes = await _clienteRepository.GetAllAsync();
-            if (existentes.Any(c => c.Email.ToLower() == cliente.Email.ToLower()))
-                throw new Exception("Ya existe un cliente con ese correo electrónico.");
-
-            await _clienteRepository.AddAsync(cliente);
+            await _unitOfWork.Clientes.AddAsync(cliente);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(Cliente cliente)
         {
-            await _clienteRepository.UpdateAsync(cliente);
+            _unitOfWork.Clientes.Update(cliente);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
-            var cliente = await _clienteRepository.GetByIdAsync(id);
-            if (cliente == null)
-                throw new Exception("El cliente no existe.");
-
-            await _clienteRepository.DeleteAsync(cliente);
+            await _unitOfWork.Clientes.DeleteAsync(id);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }

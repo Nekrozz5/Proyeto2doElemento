@@ -1,8 +1,7 @@
 ﻿using AutoMapper;
 using Libreria.Core.Entities;
-using Libreria.Core.Interfaces;
+using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Autor;
-using Libreria.Infrastructure.DTOs.Autor.Libreria.Api.DTOs.Autor;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Libreria.Api.Controllers
@@ -11,48 +10,46 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class AutorController : ControllerBase
     {
-        private readonly IAutorRepository _repo;
+        private readonly AutorService _service;
         private readonly IMapper _mapper;
-
-        public AutorController(IAutorRepository repo, IMapper mapper)
+        public AutorController(AutorService service, IMapper mapper)
         {
-            _repo = repo;
+            _service = service;
             _mapper = mapper;
         }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<AutorDTO>>> GetAll()
+        public IActionResult Get() => Ok(_service.GetAll());
+
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> Get(int id)
         {
-            var autores = await _repo.GetAllAsync();
-            return Ok(_mapper.Map<IEnumerable<AutorDTO>>(autores));
+            var entity = await _service.GetByIdAsync(id);
+            return entity is null ? NotFound() : Ok(entity);
         }
 
         [HttpPost]
-        public async Task<ActionResult> Create(AutorCreateDto dto)
+        public async Task<IActionResult> Post([FromBody] AutorCreateDto dto)
         {
-            var autor = _mapper.Map<Autor>(dto);
-            await _repo.AddAsync(autor);
-            return CreatedAtAction(nameof(GetAll), new { id = autor.Id }, _mapper.Map<AutorDTO>(autor));
+            var entity = _mapper.Map<Autor>(dto);
+            await _service.AddAsync(entity);
+            return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
         }
 
-        [HttpPut("{id}")]
-        public async Task<ActionResult> Update(int id, AutorUpdateDto dto)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Put(int id, [FromBody] AutorUpdateDto dto)
         {
-            var autor = await _repo.GetByIdAsync(id);
-            if (autor == null) return NotFound();
-
-            _mapper.Map(dto, autor);
-            await _repo.UpdateAsync(autor);
+            var existing = await _service.GetByIdAsync(id);
+            if (existing is null) return NotFound();
+            _mapper.Map(dto, existing);
+            await _service.UpdateAsync(existing);
             return NoContent();
         }
 
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var autor = await _repo.GetByIdAsync(id);
-            if (autor == null) return NotFound();
-
-            await _repo.DeleteAsync(autor);
+            await _service.DeleteAsync(id);
             return NoContent();
         }
     }

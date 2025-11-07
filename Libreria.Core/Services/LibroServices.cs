@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-
 using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
 
@@ -11,50 +7,39 @@ namespace Libreria.Core.Services
 {
     public class LibroService
     {
-        private readonly ILibroRepository _libroRepository;
-        private readonly IAutorRepository _autorRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public LibroService(
-            ILibroRepository libroRepository,
-            IAutorRepository autorRepository)
+        public LibroService(IUnitOfWork unitOfWork)
         {
-            _libroRepository = libroRepository;
-            _autorRepository = autorRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        // Ejemplo de método con lógica de negocio
-        public async Task<IEnumerable<Libro>> GetAllAsync()
+        public IEnumerable<Libro> GetAll()
         {
-            return await _libroRepository.GetAllAsync();
+            return _unitOfWork.Libros.GetAll();
         }
 
         public async Task<Libro?> GetByIdAsync(int id)
         {
-            return await _libroRepository.GetByIdAsync(id);
+            return await _unitOfWork.Libros.GetById(id);
         }
 
-        public async Task InsertAsync(Libro libro)
+        public async Task AddAsync(Libro libro)
         {
-            // Validar si el autor existe
-            var autor = await _autorRepository.GetByIdAsync(libro.AutorId);
-            if (autor == null)
-                throw new Exception("El autor especificado no existe.");
-
-            await _libroRepository.AddAsync(libro);
+            await _unitOfWork.Libros.AddAsync(libro);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(Libro libro)
         {
-            await _libroRepository.UpdateAsync(libro);
+            _unitOfWork.Libros.Update(libro);
+            await _unitOfWork.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(int id)
         {
-            var libro = await _libroRepository.GetByIdAsync(id);
-            if (libro == null)
-                throw new Exception("El libro no existe.");
-
-            await _libroRepository.DeleteAsync(libro);
+            await _unitOfWork.Libros.DeleteAsync(id);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }
