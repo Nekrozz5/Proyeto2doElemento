@@ -59,7 +59,7 @@ namespace Libreria.Core.Services
             factura.Total = total;
             await _facturaRepository.AddAsync(factura);
         }
-
+        //holaaaaaaaaa
 
         public async Task UpdateAsync(Factura factura)
         {
