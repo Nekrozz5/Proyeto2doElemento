@@ -22,6 +22,10 @@ namespace Libreria.Infrastructure.Repositories
             _context = context;
             _entities = context.Set<T>();
         }
+        public IQueryable<T> Query()
+        {
+            return _entities.AsQueryable();
+        }
 
         // Obtener todos los registros
         public IEnumerable<T> GetAll()

@@ -15,9 +15,22 @@ namespace Libreria.Infrastructure.Mappings
         {
             // Libro
             CreateMap<Libro, LibroDto>()
-                .ForMember(d => d.AutorNombre, o => o.MapFrom(s => s.Autor != null ? (s.Autor.Nombre + " " + s.Autor.Apellido) : string.Empty));
-            CreateMap<LibroCreateDto, Libro>();
-            CreateMap<LibroUpdateDto, Libro>();
+    .ForMember(dest => dest.AutorNombre,
+        opt => opt.MapFrom(src =>
+            src.Autor != null
+                ? $"{src.Autor.Nombre} {src.Autor.Apellido}"
+                : string.Empty))
+    .ForMember(dest => dest.AnioPublicacion,
+        opt => opt.MapFrom(src => src.AnioPublicacion))
+    .ForSourceMember(src => src.Autor, opt => opt.DoNotValidate());
+
+            CreateMap<LibroCreateDto, Libro>()
+                .ForMember(dest => dest.AnioPublicacion,
+                    opt => opt.MapFrom(src => src.AnioPublicacion));
+
+            CreateMap<LibroUpdateDto, Libro>()
+                .ForMember(dest => dest.AnioPublicacion,
+                    opt => opt.MapFrom(src => src.AnioPublicacion));
 
             // Autor
             CreateMap<Autor, AutorDTO>()

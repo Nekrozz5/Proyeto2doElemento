@@ -12,6 +12,7 @@ namespace Libreria.Core.Interfaces
         IBaseRepository<Factura> Facturas { get; }
         IBaseRepository<DetalleFactura> DetallesFactura { get; }
 
+
         void SaveChanges();
         Task SaveChangesAsync();
     }

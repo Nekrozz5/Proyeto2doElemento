@@ -3,7 +3,7 @@
     public  class Libro : BaseEntity
     {
         public string Titulo { get; set; } = string.Empty;
-        public int AnioPublicacion { get; set; }
+        public int? AnioPublicacion { get; set; }
         public string Descripcion { get; set; } = string.Empty;
         public decimal Precio { get; set; }
         public int Stock { get; set; }

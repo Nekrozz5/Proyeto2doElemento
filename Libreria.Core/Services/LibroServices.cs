@@ -2,6 +2,7 @@
 using Libreria.Core.Interfaces;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 
 namespace Libreria.Core.Services
 {
@@ -16,7 +17,10 @@ namespace Libreria.Core.Services
 
         public IEnumerable<Libro> GetAll()
         {
-            return _unitOfWork.Libros.GetAll();
+            return _unitOfWork.Libros.Query()
+               .Include(l => l.Autor)
+               .AsNoTracking()
+               .ToList();
         }
 
         public async Task<Libro?> GetByIdAsync(int id)
