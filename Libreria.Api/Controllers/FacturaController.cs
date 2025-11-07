@@ -1,7 +1,9 @@
-﻿using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
+﻿using Libreria.Core.Entities;
+using AutoMapper;
 using Libreria.Core.Services;
-using Libreria.Core.Entities;
+using Libreria.Infrastructure.DTOs.Factura;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading.Tasks;
 
 namespace Libreria.Api.Controllers
 {
@@ -10,33 +12,42 @@ namespace Libreria.Api.Controllers
     public class FacturaController : ControllerBase
     {
         private readonly FacturaService _facturaService;
-
-        public FacturaController(FacturaService facturaService)
+        private readonly IMapper _mapper;
+        public FacturaController(FacturaService facturaService, IMapper mapper) // ✅ recibe IMapper
         {
             _facturaService = facturaService;
+            _mapper = mapper; // ✅ asigna aquí
         }
+
+
 
         // GET: api/Factura
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<ActionResult<IEnumerable<FacturaDTO>>> GetAll()
         {
-            var facturas = await _facturaService.GetAllAsync(); // <-- usar Async
-            return Ok(facturas);
+            var facturas = await _facturaService.GetAllWithDetailsAsync();
+            var dto = _mapper.Map<IEnumerable<FacturaDTO>>(facturas);
+            return Ok(dto);
         }
-
         // GET: api/Factura/5
         [HttpGet("{id:int}")]
-        public async Task<IActionResult> GetById(int id)
+        public async Task<ActionResult<FacturaDTO>> GetById(int id)
         {
-            var factura = await _facturaService.GetByIdAsync(id);
-            if (factura is null) return NotFound();
-            return Ok(factura);
+            var factura = await _facturaService.GetByIdWithDetailsAsync(id);
+            if (factura == null) return NotFound();
+
+            var dto = _mapper.Map<FacturaDTO>(factura);
+            return Ok(dto);
         }
+
+       
+       
 
         // POST: api/Factura
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Factura factura)
+        public async Task<IActionResult> Create([FromBody] FacturaCreateDTO dto)
         {
+            var factura = _mapper.Map<Factura>(dto);
             await _facturaService.AddAsync(factura);
             return CreatedAtAction(nameof(GetById), new { id = factura.Id }, factura);
         }

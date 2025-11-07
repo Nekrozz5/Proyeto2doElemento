@@ -19,12 +19,26 @@ namespace Libreria.Infrastructure.Repositories
 
         public async Task<IEnumerable<Factura>> GetAllAsync()
         {
-            return await _context.Facturas.ToListAsync();
+            return await _context.Facturas
+         .Include(f => f.Cliente)
+         .Include(f => f.DetalleFacturas)
+             .ThenInclude(df => df.Libro)
+         .ToListAsync();
         }
 
         public async Task<Factura?> GetByIdAsync(int id)
         {
-            return await _context.Facturas.FindAsync(id);
+            return await _context.Facturas
+        .Include(f => f.Cliente)
+        .Include(f => f.DetalleFacturas)
+            .ThenInclude(df => df.Libro)
+        .FirstOrDefaultAsync(f => f.Id == id);
+        }
+        public async Task AddAsync(Factura factura)
+        {
+            // Asegura el agregado de la raíz y sus detalles (cascada)
+            await _context.Facturas.AddAsync(factura);
+            await _context.SaveChangesAsync();
         }
 
         // === Implementaciones nuevas, coherentes con el servicio ===

@@ -31,31 +31,36 @@ namespace Libreria.Core.Services
         {
             return await _facturaRepository.GetByIdAsync(id);
         }
+        public Task<IEnumerable<Factura>> GetAllWithDetailsAsync()
+    => _facturaRepository.GetAllWithDetailsAsync();
 
+        public Task<Factura?> GetByIdWithDetailsAsync(int id)
+            => _facturaRepository.GetByIdWithDetailsAsync(id);
         public async Task AddAsync(Factura factura)
         {
-            var cliente = await _clienteRepository.GetByIdAsync(factura.ClienteId);
-            if (cliente == null)
-                throw new Exception("El cliente no existe.");
-
+            factura.Fecha = DateTime.Now;
             decimal total = 0;
-            foreach (var detalle in factura.DetalleFacturas)
+
+            foreach (var df in factura.DetalleFacturas)
             {
-                var libro = await _libroRepository.GetByIdAsync(detalle.LibroId);
-                if (libro == null)
-                    throw new Exception($"El libro con ID {detalle.LibroId} no existe.");
+                var libro = await _libroRepository.GetByIdAsync(df.LibroId);
+                if (libro == null) throw new Exception($"Libro {df.LibroId} no existe.");
 
-                total += detalle.PrecioUnitario * detalle.Cantidad;
+                df.PrecioUnitario = libro.Precio;
+                df.Subtotal = df.Cantidad * df.PrecioUnitario;
 
-                libro.Stock -= detalle.Cantidad;
+                // Actualiza stock (si tu patrón actual lo hace aquí)
+                libro.Stock -= df.Cantidad;
                 await _libroRepository.UpdateAsync(libro);
+
+                total += df.Subtotal;
             }
 
             factura.Total = total;
-            factura.Fecha = DateTime.Now;
 
-            await _facturaRepository.AddAsync(factura);
+            await _facturaRepository.AddAsync(factura); // tu repo ya guarda (fix anterior)
         }
+
 
         public async Task UpdateAsync(Factura factura)
         {
