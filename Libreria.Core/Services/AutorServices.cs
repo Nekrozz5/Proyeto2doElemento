@@ -1,7 +1,7 @@
-﻿using System.Collections.Generic;
-using System.Threading.Tasks;
-using Libreria.Core.Entities;
+﻿using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Libreria.Core.Services
 {
@@ -26,19 +26,19 @@ namespace Libreria.Core.Services
 
         public async Task AddAsync(Autor autor)
         {
-            await _unitOfWork.Autores.AddAsync(autor);
+            await _unitOfWork.Autores.Add(autor);
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(Autor autor)
+        public void Update(Autor autor)
         {
             _unitOfWork.Autores.Update(autor);
-            await _unitOfWork.SaveChangesAsync();
+            _unitOfWork.SaveChanges();
         }
 
         public async Task DeleteAsync(int id)
         {
-            await _unitOfWork.Autores.DeleteAsync(id);
+            await _unitOfWork.Autores.Delete(id);
             await _unitOfWork.SaveChangesAsync();
         }
     }

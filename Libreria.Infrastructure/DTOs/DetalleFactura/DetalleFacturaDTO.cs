@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Libreria.Infrastructure.DTOs.DetalleFactura
+﻿namespace Libreria.Infrastructure.DTOs.DetalleFactura
 {
     public class DetalleFacturaDTO
     {
@@ -13,6 +7,7 @@ namespace Libreria.Infrastructure.DTOs.DetalleFactura
         public decimal PrecioUnitario { get; set; }
         public decimal Subtotal { get; set; }
 
+        // Información del libro asociada (por AutoMapper)
         public string LibroTitulo { get; set; } = string.Empty;
         public decimal LibroPrecio { get; set; }
     }

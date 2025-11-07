@@ -1,16 +1,18 @@
 ﻿using Libreria.Core.Entities;
+using System;
+using System.Threading.Tasks;
 
 namespace Libreria.Core.Interfaces
 {
-    public interface IUnitOfWork : System.IDisposable
+    public interface IUnitOfWork : IDisposable
     {
         IBaseRepository<Libro> Libros { get; }
-        IBaseRepository<Autor> Autores { get; }
         IBaseRepository<Cliente> Clientes { get; }
-        IFacturaRepository Facturas { get; }
-        IDetalleFacturaRepository DetallesFactura { get; }   // ← usa la interfaz específica
+        IBaseRepository<Autor> Autores { get; }
+        IBaseRepository<Factura> Facturas { get; }
+        IBaseRepository<DetalleFactura> DetallesFactura { get; }
 
-        System.Threading.Tasks.Task<int> SaveChangesAsync();
-        int SaveChanges();
+        void SaveChanges();
+        Task SaveChangesAsync();
     }
 }

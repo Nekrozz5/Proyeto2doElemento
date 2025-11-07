@@ -11,9 +11,9 @@ namespace Libreria.Core.Entities
         public decimal Subtotal { get; set; }
 
         public int FacturaId { get; set; }
-        public virtual Factura Factura { get; set; } = null!;
+        public virtual Factura? Factura { get; set; }
 
         public int LibroId { get; set; }
-        public virtual Libro Libro { get; set; } = null!;
+        public virtual Libro? Libro { get; set; }
     }
 }

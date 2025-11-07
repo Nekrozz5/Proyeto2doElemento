@@ -1,10 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Libreria.Infrastructure.DTOs.DetalleFactura;
-
 
 namespace Libreria.Infrastructure.DTOs.Factura
 {
@@ -14,8 +10,10 @@ namespace Libreria.Infrastructure.DTOs.Factura
         public DateTime Fecha { get; set; }
         public decimal Total { get; set; }
 
+        // Mapeado desde Cliente.Nombre + Apellido
         public string ClienteNombre { get; set; } = string.Empty;
 
-        public List<DetalleFacturaDTO> Detalles { get; set; } = new();
+        // Lista de detalles con info del libro
+        public IEnumerable<DetalleFacturaDTO> Detalles { get; set; } = new List<DetalleFacturaDTO>();
     }
 }

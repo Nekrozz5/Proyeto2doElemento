@@ -1,78 +1,95 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Libreria.Core.Entities;
+﻿using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace Libreria.Core.Services
 {
     public class FacturaService
     {
-        private readonly IFacturaRepository _facturaRepository;
-        private readonly IClienteRepository _clienteRepository;
-        private readonly ILibroRepository _libroRepository;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public FacturaService(
-            IFacturaRepository facturaRepository,
-            IClienteRepository clienteRepository,
-            ILibroRepository libroRepository)
+        public FacturaService(IUnitOfWork unitOfWork)
         {
-            _facturaRepository = facturaRepository;
-            _clienteRepository = clienteRepository;
-            _libroRepository = libroRepository;
+            _unitOfWork = unitOfWork;
         }
 
-        public async Task<IEnumerable<Factura>> GetAllAsync()
+        // ======================
+        // GET: Todas las facturas con cliente y detalles
+        // ======================
+        public IEnumerable<Factura> GetAll()
         {
-            return await _facturaRepository.GetAllAsync();
+            return _unitOfWork.Facturas
+                .GetAll()
+                .AsQueryable()
+                .Include(f => f.Cliente)
+                .Include(f => f.DetalleFacturas)
+                    .ThenInclude(df => df.Libro);
         }
 
+        // ======================
+        // GET: Factura por Id
+        // ======================
         public async Task<Factura?> GetByIdAsync(int id)
         {
-            return await _facturaRepository.GetByIdAsync(id);
+            return await _unitOfWork.Facturas
+                .GetAll()
+                .AsQueryable()
+                .Include(f => f.Cliente)
+                .Include(f => f.DetalleFacturas)
+                    .ThenInclude(df => df.Libro)
+                .FirstOrDefaultAsync(f => f.Id == id);
         }
-        public Task<IEnumerable<Factura>> GetAllWithDetailsAsync()
-    => _facturaRepository.GetAllWithDetailsAsync();
 
-        public Task<Factura?> GetByIdWithDetailsAsync(int id)
-            => _facturaRepository.GetByIdWithDetailsAsync(id);
+        // ======================
+        // POST: Crear nueva factura
+        // ======================
         public async Task AddAsync(Factura factura)
         {
-            factura.Fecha = DateTime.Now;
+            // Buscar cliente
+            var cliente = await _unitOfWork.Clientes.GetById(factura.ClienteId);
+            if (cliente == null)
+                throw new Exception("Cliente no encontrado.");
+
+            // Calcular total y actualizar stock
             decimal total = 0;
-
-            foreach (var df in factura.DetalleFacturas)
+            foreach (var detalle in factura.DetalleFacturas)
             {
-                var libro = await _libroRepository.GetByIdAsync(df.LibroId);
+                var libro = await _unitOfWork.Libros.GetById(detalle.LibroId);
                 if (libro == null)
-                    throw new Exception($"Libro {df.LibroId} no encontrado");
+                    throw new Exception($"Libro con ID {detalle.LibroId} no encontrado.");
 
-                df.PrecioUnitario = libro.Precio;
-                df.Subtotal = df.Cantidad * libro.Precio;
+                detalle.PrecioUnitario = libro.Precio;
+                detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario;
+                total += detalle.Subtotal;
 
-                libro.Stock -= df.Cantidad;
-                await _libroRepository.UpdateAsync(libro);
-
-                total += df.Subtotal;
+                // Actualizar stock
+                libro.Stock -= detalle.Cantidad;
+                _unitOfWork.Libros.Update(libro);
             }
 
+            factura.Fecha = DateTime.Now;
             factura.Total = total;
-            await _facturaRepository.AddAsync(factura);
-        }
-        //holaaaaaaaaa
 
-        public async Task UpdateAsync(Factura factura)
+            await _unitOfWork.Facturas.Add(factura);
+            await _unitOfWork.SaveChangesAsync();
+        }
+
+        // ======================
+        // PUT: Actualizar factura
+        // ======================
+        public void Update(Factura factura)
         {
-            await _facturaRepository.UpdateAsync(factura);
+            _unitOfWork.Facturas.Update(factura);
+            _unitOfWork.SaveChanges();
         }
 
+        // ======================
+        // DELETE
+        // ======================
         public async Task DeleteAsync(int id)
         {
-            var factura = await _facturaRepository.GetByIdAsync(id);
-            if (factura == null)
-                throw new Exception("La factura no existe.");
-
-            await _facturaRepository.DeleteAsync(factura);
+            await _unitOfWork.Facturas.Delete(id);
+            await _unitOfWork.SaveChangesAsync();
         }
     }
 }

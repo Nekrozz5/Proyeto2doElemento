@@ -1,8 +1,5 @@
-﻿using AutoMapper;
-using Libreria.Core.Entities;
+﻿using Libreria.Core.Entities;
 using Libreria.Core.Services;
-using Libreria.Infrastructure.DTOs.DetalleFactura;
-using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Libreria.Api.Controllers
@@ -11,34 +8,52 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class DetalleFacturaController : ControllerBase
     {
-        private readonly DetalleFacturaService _service;
-        private readonly IMapper _mapper;
-        public DetalleFacturaController(DetalleFacturaService service, IMapper mapper)
+        private readonly DetalleFacturaService _detalleService;
+
+        public DetalleFacturaController(DetalleFacturaService detalleService)
         {
-            _service = service;
-            _mapper = mapper;
+            _detalleService = detalleService;
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        [HttpGet]
+        public IActionResult GetAll()
         {
-            var entity = await _service.GetByIdAsync(id);
-            return entity is null ? NotFound() : Ok(entity);
+            var detalles = _detalleService.GetAll();
+            return Ok(detalles);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var detalle = await _detalleService.GetByIdAsync(id);
+            if (detalle == null)
+                return NotFound();
+
+            return Ok(detalle);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] DetalleFacturaCreateDTO dto)
+        public async Task<IActionResult> Create(DetalleFactura detalle)
         {
-            var entity = _mapper.Map<DetalleFactura>(dto);
-            await _service.AddAsync(entity);
-            return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+            await _detalleService.AddAsync(detalle);
+            return Ok("Detalle agregado correctamente.");
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, DetalleFactura detalle)
+        {
+            if (id != detalle.Id)
+                return BadRequest("El ID del detalle no coincide.");
+
+            _detalleService.Update(detalle);
+            return Ok("Detalle actualizado correctamente.");
+        }
+
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            await _detalleService.DeleteAsync(id);
+            return Ok("Detalle eliminado correctamente.");
         }
     }
 }

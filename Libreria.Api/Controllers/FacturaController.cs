@@ -1,9 +1,8 @@
-﻿using Libreria.Core.Entities;
-using AutoMapper;
+﻿using AutoMapper;
+using Libreria.Core.Entities;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
 
 namespace Libreria.Api.Controllers
 {
@@ -13,60 +12,78 @@ namespace Libreria.Api.Controllers
     {
         private readonly FacturaService _facturaService;
         private readonly IMapper _mapper;
-        public FacturaController(FacturaService facturaService, IMapper mapper) // ✅ recibe IMapper
+
+        public FacturaController(FacturaService facturaService, IMapper mapper)
         {
             _facturaService = facturaService;
-            _mapper = mapper; // ✅ asigna aquí
+            _mapper = mapper;
         }
 
-
-
-        // GET: api/Factura
+        // ========================================
+        // GET: Todas las facturas
+        // ========================================
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<FacturaDTO>>> GetAll()
+        public IActionResult GetAll()
         {
-            var facturas = await _facturaService.GetAllWithDetailsAsync();
-            var dto = _mapper.Map<IEnumerable<FacturaDTO>>(facturas);
-            return Ok(dto);
-        }
-        // GET: api/Factura/5
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<FacturaDTO>> GetById(int id)
-        {
-            var factura = await _facturaService.GetByIdWithDetailsAsync(id);
-            if (factura == null) return NotFound();
-
-            var dto = _mapper.Map<FacturaDTO>(factura);
-            return Ok(dto);
+            var facturas = _facturaService.GetAll();
+            var facturasDto = _mapper.Map<IEnumerable<FacturaDTO>>(facturas);
+            return Ok(facturasDto);
         }
 
-       
-       
+        // ========================================
+        // GET: Factura por ID
+        // ========================================
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var factura = await _facturaService.GetByIdAsync(id);
+            if (factura == null)
+                return NotFound();
 
-        // POST: api/Factura
+            var facturaDto = _mapper.Map<FacturaDTO>(factura);
+            return Ok(facturaDto);
+        }
+
+        // ========================================
+        // POST: Crear una nueva factura
+        // ========================================
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] FacturaCreateDTO dto)
         {
+            // Mapeamos el DTO a la entidad Factura
             var factura = _mapper.Map<Factura>(dto);
             await _facturaService.AddAsync(factura);
-            return CreatedAtAction(nameof(GetById), new { id = factura.Id }, factura);
+
+            // Recuperamos la factura ya guardada con includes
+            var facturaCompleta = await _facturaService.GetByIdAsync(factura.Id);
+
+            // Mapeamos nuevamente al DTO para devolver solo los datos necesarios
+            var facturaDto = _mapper.Map<FacturaDTO>(facturaCompleta);
+
+            return Ok(facturaDto);
         }
 
-        // PUT: api/Factura/5
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Update(int id, [FromBody] Factura factura)
+        // ========================================
+        // PUT: Actualizar una factura existente
+        // ========================================
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, [FromBody] Factura factura)
         {
-            if (id != factura.Id) return BadRequest("El id de la URL no coincide con el del cuerpo.");
-            await _facturaService.UpdateAsync(factura);
-            return NoContent();
+            if (id != factura.Id)
+                return BadRequest("El ID de la factura no coincide.");
+
+            _facturaService.Update(factura);
+            return Ok("Factura actualizada correctamente.");
         }
 
-        // DELETE: api/Factura/5
-        [HttpDelete("{id:int}")]
+        // ========================================
+        // DELETE: Eliminar una factura
+        // ========================================
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             await _facturaService.DeleteAsync(id);
-            return NoContent();
+            return Ok("Factura eliminada correctamente.");
         }
     }
 }

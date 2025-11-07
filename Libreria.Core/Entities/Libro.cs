@@ -10,7 +10,7 @@
 
         // Relación con Autor
         public int AutorId { get; set; }
-        public virtual Autor Autor { get; set; }
+        public virtual Autor? Autor { get; set; }
     }
 
 }

@@ -1,7 +1,5 @@
-﻿using AutoMapper;
-using Libreria.Core.Entities;
+﻿using Libreria.Core.Entities;
 using Libreria.Core.Services;
-using Libreria.Infrastructure.DTOs.Libro;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Libreria.Api.Controllers
@@ -10,47 +8,52 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class LibroController : ControllerBase
     {
-        private readonly LibroService _service;
-        private readonly IMapper _mapper;
-        public LibroController(LibroService service, IMapper mapper)
+        private readonly LibroService _libroService;
+
+        public LibroController(LibroService libroService)
         {
-            _service = service;
-            _mapper = mapper;
+            _libroService = libroService;
         }
 
         [HttpGet]
-        public IActionResult Get() => Ok(_service.GetAll());
-
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        public IActionResult GetAll()
         {
-            var entity = await _service.GetByIdAsync(id);
-            return entity is null ? NotFound() : Ok(entity);
+            var libros = _libroService.GetAll();
+            return Ok(libros);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var libro = await _libroService.GetByIdAsync(id);
+            if (libro == null)
+                return NotFound();
+
+            return Ok(libro);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] LibroCreateDto dto)
+        public async Task<IActionResult> Create(Libro libro)
         {
-            var entity = _mapper.Map<Libro>(dto);
-            await _service.AddAsync(entity);
-            return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+            await _libroService.AddAsync(libro);
+            return Ok("Libro agregado correctamente.");
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Put(int id, [FromBody] LibroUpdateDto dto)
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, Libro libro)
         {
-            var existing = await _service.GetByIdAsync(id);
-            if (existing is null) return NotFound();
-            _mapper.Map(dto, existing);
-            await _service.UpdateAsync(existing);
-            return NoContent();
+            if (id != libro.Id)
+                return BadRequest("El ID del libro no coincide.");
+
+            _libroService.Update(libro);
+            return Ok("Libro actualizado correctamente.");
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            await _libroService.DeleteAsync(id);
+            return Ok("Libro eliminado correctamente.");
         }
     }
 }

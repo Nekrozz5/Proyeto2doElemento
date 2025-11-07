@@ -1,7 +1,5 @@
-﻿using AutoMapper;
-using Libreria.Core.Entities;
+﻿using Libreria.Core.Entities;
 using Libreria.Core.Services;
-using Libreria.Infrastructure.DTOs.Autor;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Libreria.Api.Controllers
@@ -10,47 +8,52 @@ namespace Libreria.Api.Controllers
     [Route("api/[controller]")]
     public class AutorController : ControllerBase
     {
-        private readonly AutorService _service;
-        private readonly IMapper _mapper;
-        public AutorController(AutorService service, IMapper mapper)
+        private readonly AutorService _autorService;
+
+        public AutorController(AutorService autorService)
         {
-            _service = service;
-            _mapper = mapper;
+            _autorService = autorService;
         }
 
         [HttpGet]
-        public IActionResult Get() => Ok(_service.GetAll());
-
-        [HttpGet("{id:int}")]
-        public async Task<IActionResult> Get(int id)
+        public IActionResult GetAll()
         {
-            var entity = await _service.GetByIdAsync(id);
-            return entity is null ? NotFound() : Ok(entity);
+            var autores = _autorService.GetAll();
+            return Ok(autores);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var autor = await _autorService.GetByIdAsync(id);
+            if (autor == null)
+                return NotFound();
+
+            return Ok(autor);
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post([FromBody] AutorCreateDto dto)
+        public async Task<IActionResult> Create(Autor autor)
         {
-            var entity = _mapper.Map<Autor>(dto);
-            await _service.AddAsync(entity);
-            return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
+            await _autorService.AddAsync(autor);
+            return Ok("Autor agregado correctamente.");
         }
 
-        [HttpPut("{id:int}")]
-        public async Task<IActionResult> Put(int id, [FromBody] AutorUpdateDto dto)
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, Autor autor)
         {
-            var existing = await _service.GetByIdAsync(id);
-            if (existing is null) return NotFound();
-            _mapper.Map(dto, existing);
-            await _service.UpdateAsync(existing);
-            return NoContent();
+            if (id != autor.Id)
+                return BadRequest("El ID del autor no coincide.");
+
+            _autorService.Update(autor);
+            return Ok("Autor actualizado correctamente.");
         }
 
-        [HttpDelete("{id:int}")]
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            await _service.DeleteAsync(id);
-            return NoContent();
+            await _autorService.DeleteAsync(id);
+            return Ok("Autor eliminado correctamente.");
         }
     }
 }

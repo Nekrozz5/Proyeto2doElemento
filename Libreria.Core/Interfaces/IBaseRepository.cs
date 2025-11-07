@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Libreria.Core.Entities;
+using System.Collections.Generic;
 using System.Threading.Tasks;
-using Libreria.Core.Entities;
 
 namespace Libreria.Core.Interfaces
 {
@@ -8,8 +8,8 @@ namespace Libreria.Core.Interfaces
     {
         IEnumerable<T> GetAll();
         Task<T?> GetById(int id);
-        Task AddAsync(T entity);
+        Task Add(T entity);
         void Update(T entity);
-        Task DeleteAsync(int id);
+        Task Delete(int id);
     }
 }
