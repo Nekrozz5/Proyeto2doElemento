@@ -64,5 +64,11 @@ namespace Libreria.Api.Controllers
             return Ok(clientes);
         }
 
+        [HttpGet("resumen")]
+        public async Task<IActionResult> GetResumen()
+        {
+            var resumen = await _clienteService.GetResumenAsync();
+            return Ok(new { mensaje = "Resumen de clientes obtenido correctamente.", data = resumen });
+        }
     }
 }

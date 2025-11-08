@@ -64,6 +64,15 @@ namespace Libreria.Api.Controllers
             return Ok(autores);
         }
 
+        // ==================================================
+        // GET: api/autor/resumen (DAPPER)
+        // ==================================================
+        [HttpGet("resumen")]
+        public async Task<IActionResult> GetResumen()
+        {
+            var resumen = await _autorService.GetResumenAsync();
+            return Ok(new { mensaje = "Resumen de autores obtenido correctamente.", data = resumen });
+        }
 
     }
 }

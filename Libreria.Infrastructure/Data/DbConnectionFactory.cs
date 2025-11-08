@@ -1,9 +1,10 @@
-﻿using Libreria.Core.Enums;
-using Libreria.Core.Interfaces;
-using Microsoft.Extensions.Configuration;
-using MySql.Data.MySqlClient;
+﻿using System;
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
+using MySql.Data.MySqlClient;
+using Microsoft.Extensions.Configuration;
+using Libreria.Core.Enums;
+using Libreria.Core.Interfaces;
 
 namespace Libreria.Infrastructure.Data
 {
@@ -20,7 +21,7 @@ namespace Libreria.Infrastructure.Data
             _sqlConn = _config.GetConnectionString("ConnectionSqlServer") ?? string.Empty;
             _mySqlConn = _config.GetConnectionString("ConnectionMySql") ?? string.Empty;
 
-            var providerStr = _config.GetSection("DatabaseProvider").Value ?? "MySql";
+            var providerStr = _config.GetSection("DatabaseProvider").Value ?? "SqlServer";
 
             Provider = providerStr.Equals("MySql", StringComparison.OrdinalIgnoreCase)
                 ? DatabaseProvider.MySql
@@ -29,8 +30,11 @@ namespace Libreria.Infrastructure.Data
 
         public IDbConnection CreateConnection()
         {
-            return new MySqlConnection(_mySqlConn);
-
+            return Provider switch
+            {
+                DatabaseProvider.MySql => new MySqlConnection(_mySqlConn),
+                _ => new SqlConnection(_sqlConn),
+            };
         }
     }
 }

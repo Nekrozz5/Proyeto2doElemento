@@ -1,4 +1,5 @@
-﻿using Libreria.Core.Entities;
+﻿using Dapper; // ✅ Necesario para DynamicParameters
+using Libreria.Core.Entities;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
 using Libreria.Core.QueryFilters;
@@ -12,18 +13,36 @@ namespace Libreria.Core.Services
     public class LibroService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDapperContext _dapper; // ✅ Dapper inyectado
 
-        public LibroService(IUnitOfWork unitOfWork)
+        public LibroService(IUnitOfWork unitOfWork, IDapperContext dapper)
         {
             _unitOfWork = unitOfWork;
+            _dapper = dapper;
         }
 
+        // =====================================================
+        // MÉTODO USADO POR EL CONTROLLER (sin cambiar la firma)
+        // =====================================================
         public IEnumerable<Libro> GetAll()
         {
-            var libros = _unitOfWork.Libros.Query()
-                .Include(l => l.Autor)
-                .AsNoTracking()
-                .ToList();
+            // Dapper no tiene métodos síncronos → llamamos un método async internamente.
+            var task = GetAllAsync();
+            task.Wait(); // Esperar resultado (sin alterar el controller)
+            return task.Result;
+        }
+
+        // =====================================================
+        // Implementación interna con Dapper
+        // =====================================================
+        private async Task<IEnumerable<Libro>> GetAllAsync()
+        {
+            var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
+                               l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
+                        FROM Libros l
+                        LEFT JOIN Autores a ON l.AutorId = a.Id";
+
+            var libros = await _dapper.QueryAsync<Libro>(sql);
 
             if (libros == null || !libros.Any())
                 throw new NotFoundException("No se encontraron libros registrados.");
@@ -31,9 +50,18 @@ namespace Libreria.Core.Services
             return libros;
         }
 
+        // =====================================================
+        // GET BY ID (Dapper también)
+        // =====================================================
         public async Task<Libro?> GetByIdAsync(int id)
         {
-            var libro = await _unitOfWork.Libros.GetById(id);
+            var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
+                               l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
+                        FROM Libros l
+                        LEFT JOIN Autores a ON l.AutorId = a.Id
+                        WHERE l.Id = @id";
+
+            var libro = await _dapper.QueryFirstOrDefaultAsync<Libro>(sql, new { id });
 
             if (libro == null)
                 throw new NotFoundException($"No se encontró el libro con ID {id}.");
@@ -41,6 +69,9 @@ namespace Libreria.Core.Services
             return libro;
         }
 
+        // =====================================================
+        // CREATE / UPDATE / DELETE (EF CORE)
+        // =====================================================
         public async Task AddAsync(Libro libro)
         {
             if (string.IsNullOrWhiteSpace(libro.Titulo))
@@ -83,48 +114,51 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        // ==============================
-        // QUERY FILTERS: Filtrar libros
-        // ==============================
+        // =====================================================
+        // FILTROS (Dapper también)
+        // =====================================================
         public async Task<IEnumerable<Libro>> GetFilteredAsync(LibroQueryFilter filters)
         {
-            var query = _unitOfWork.Libros.Query()
-                .Include(l => l.Autor)
-                .AsNoTracking()
-                .AsQueryable();
+            var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
+                               l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
+                        FROM Libros l
+                        LEFT JOIN Autores a ON l.AutorId = a.Id
+                        WHERE 1=1 ";
 
-            // Filtro por título
+            var parameters = new DynamicParameters();
+
             if (!string.IsNullOrWhiteSpace(filters.Titulo))
-                query = query.Where(l => l.Titulo.ToLower().Contains(filters.Titulo.Trim().ToLower()));
-
-            // --- AUTOR: búsqueda robusta (nombre, apellido o nombre completo) ---
-            if (!string.IsNullOrWhiteSpace(filters.Autor))
             {
-                var term = filters.Autor.Trim().ToLower();
-
-                query = query.Where(l =>
-                    l.Autor != null && (
-                        ((l.Autor.Nombre ?? "").ToLower().Contains(term)) ||
-                        ((l.Autor.Apellido ?? "").ToLower().Contains(term)) ||
-                        (((l.Autor.Nombre ?? "") + " " + (l.Autor.Apellido ?? "")).ToLower().Contains(term))
-                    )
-                );
+                sql += " AND LOWER(l.Titulo) LIKE CONCAT('%', LOWER(@Titulo), '%')";
+                parameters.Add("@Titulo", filters.Titulo.Trim());
             }
 
-            // Rango de precios
+            if (!string.IsNullOrWhiteSpace(filters.Autor))
+            {
+                sql += @" AND (
+                            LOWER(a.Nombre) LIKE CONCAT('%', LOWER(@Autor), '%')
+                            OR LOWER(a.Apellido) LIKE CONCAT('%', LOWER(@Autor), '%')
+                            OR LOWER(CONCAT(a.Nombre, ' ', a.Apellido)) LIKE CONCAT('%', LOWER(@Autor), '%')
+                          )";
+                parameters.Add("@Autor", filters.Autor.Trim());
+            }
+
             if (filters.MinPrecio.HasValue)
-                query = query.Where(l => l.Precio >= filters.MinPrecio.Value);
+            {
+                sql += " AND l.Precio >= @MinPrecio";
+                parameters.Add("@MinPrecio", filters.MinPrecio.Value);
+            }
 
             if (filters.MaxPrecio.HasValue)
-                query = query.Where(l => l.Precio <= filters.MaxPrecio.Value);
+            {
+                sql += " AND l.Precio <= @MaxPrecio";
+                parameters.Add("@MaxPrecio", filters.MaxPrecio.Value);
+            }
 
-            // Libros disponibles
             if (filters.Disponibles == true)
-                query = query.Where(l => l.Stock > 0);
+                sql += " AND l.Stock > 0";
 
-            var result = await query.ToListAsync();
-
-            // Si no hay resultados, devolvemos lista vacía (no excepción)
+            var result = await _dapper.QueryAsync<Libro>(sql, parameters);
             return result;
         }
     }

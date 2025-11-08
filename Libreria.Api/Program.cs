@@ -10,7 +10,6 @@ using Libreria.Infrastructure.Repositories;
 using Libreria.Infrastructure.Validators;
 using Microsoft.EntityFrameworkCore;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 // 🔹 CONFIGURAR BASE DE DATOS
@@ -36,6 +35,10 @@ builder.Services.AddAutoMapper(cfg =>
 builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+// ✅ 🔹 REGISTRO DE DAPPER (complemento)
+builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
+builder.Services.AddScoped<IDapperContext, DapperContext>();
+
 // 🔹 SERVICIOS DE LA CAPA CORE
 builder.Services.AddScoped<LibroService>();
 builder.Services.AddScoped<AutorService>();
@@ -52,8 +55,6 @@ builder.Services.AddControllers()
 
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LibroValidator>();
-
-
 
 // 🔹 SWAGGER
 builder.Services.AddEndpointsApiExplorer();

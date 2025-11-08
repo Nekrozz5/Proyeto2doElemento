@@ -1,20 +1,23 @@
-﻿using Libreria.Core.Entities;
+﻿using Dapper;
+using Libreria.Core.Entities;
 using Libreria.Core.Interfaces;
 using Libreria.Core.QueryFilters;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-
 
 namespace Libreria.Core.Services
 {
     public class DetalleFacturaService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDapperContext _dapper;
 
-        public DetalleFacturaService(IUnitOfWork unitOfWork)
+        public DetalleFacturaService(IUnitOfWork unitOfWork, IDapperContext dapper)
         {
             _unitOfWork = unitOfWork;
+            _dapper = dapper;
         }
 
         public IEnumerable<DetalleFactura> GetAll()
@@ -46,21 +49,15 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-
-        // filtros
-
         public async Task<IEnumerable<DetalleFactura>> GetFilteredAsync(DetalleFacturaQueryFilter filters)
         {
-            // 🔹 Define primero como IQueryable
             IQueryable<DetalleFactura> query = _unitOfWork.DetallesFactura.Query();
 
-            // 🔹 Luego aplica los Includes (ahora no da conflicto)
             query = query
                 .AsNoTracking()
                 .Include(d => d.Factura)
                 .Include(d => d.Libro);
 
-            // 🔹 Aplica los filtros
             if (filters.FacturaId.HasValue)
                 query = query.Where(d => d.FacturaId == filters.FacturaId.Value);
 
@@ -82,8 +79,26 @@ namespace Libreria.Core.Services
             if (filters.MaxPrecioUnitario.HasValue)
                 query = query.Where(d => d.PrecioUnitario <= filters.MaxPrecioUnitario.Value);
 
-            // 🔹 Devuelve la lista final
             return await query.ToListAsync();
+        }
+
+        // ======================
+        // DAPPER: Reporte liviano de detalles
+        // ======================
+        public async Task<IEnumerable<dynamic>> GetResumenAsync()
+        {
+            var sql = @"SELECT 
+                            d.Id,
+                            d.FacturaId,
+                            l.Titulo AS LibroTitulo,
+                            d.Cantidad,
+                            d.PrecioUnitario,
+                            d.Subtotal
+                        FROM DetallesFactura d
+                        INNER JOIN Libros l ON d.LibroId = l.Id
+                        ORDER BY d.FacturaId;";
+
+            return await _dapper.QueryAsync<dynamic>(sql);
         }
     }
 }

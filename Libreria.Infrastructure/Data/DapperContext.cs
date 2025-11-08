@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using System.Data;
 using System.Data.Common;
+using System.Threading.Tasks;
 using Dapper;
 using Libreria.Core.Enums;
 using Libreria.Core.Interfaces;
@@ -34,7 +30,7 @@ namespace Libreria.Infrastructure.Data
             _ambient.Value = (null, null);
         }
 
-        private (IDbConnection conn, IDbTransaction? tx, bool owns) GetConnAndTx()
+        private (IDbConnection conn, IDbTransaction? tx, bool ownsConnection) GetConnAndTx()
         {
             var ambient = _ambient.Value;
             if (ambient.Conn != null)

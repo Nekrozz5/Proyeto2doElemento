@@ -94,5 +94,11 @@ namespace Libreria.Api.Controllers
             var facturas = await _facturaService.GetFilteredAsync(filters);
             return Ok(facturas);
         }
+        [HttpGet("resumen")]
+        public async Task<IActionResult> GetResumen()
+        {
+            var resumen = await _facturaService.GetResumenAsync();
+            return Ok(resumen);
+        }
     }
 }

@@ -66,6 +66,13 @@ namespace Libreria.Api.Controllers
             return Ok(detalles);
         }
 
+        [HttpGet("resumen")]
+        public async Task<IActionResult> GetResumen()
+        {
+            var resumen = await _detalleService.GetResumenAsync();
+            return Ok(new { mensaje = "Resumen de detalles obtenido correctamente.", data = resumen });
+        }
+
 
     }
 }

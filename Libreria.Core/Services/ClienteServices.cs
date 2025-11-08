@@ -1,4 +1,5 @@
-﻿using Libreria.Core.Entities;
+﻿using Dapper;
+using Libreria.Core.Entities;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
 using Libreria.Core.QueryFilters;
@@ -12,15 +13,14 @@ namespace Libreria.Core.Services
     public class ClienteService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDapperContext _dapper;
 
-        public ClienteService(IUnitOfWork unitOfWork)
+        public ClienteService(IUnitOfWork unitOfWork, IDapperContext dapper)
         {
             _unitOfWork = unitOfWork;
+            _dapper = dapper;
         }
 
-        // ======================
-        // GET: Todos los clientes
-        // ======================
         public IEnumerable<Cliente> GetAll()
         {
             var clientes = _unitOfWork.Clientes.GetAll();
@@ -31,9 +31,6 @@ namespace Libreria.Core.Services
             return clientes;
         }
 
-        // ======================
-        // GET: Cliente por Id
-        // ======================
         public async Task<Cliente?> GetByIdAsync(int id)
         {
             var cliente = await _unitOfWork.Clientes.GetById(id);
@@ -44,9 +41,6 @@ namespace Libreria.Core.Services
             return cliente;
         }
 
-        // ======================
-        // POST: Crear nuevo cliente
-        // ======================
         public async Task AddAsync(Cliente cliente)
         {
             if (string.IsNullOrWhiteSpace(cliente.Nombre))
@@ -62,16 +56,10 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        // ======================
-        // PUT: Actualizar cliente
-        // ======================
         public void Update(Cliente cliente)
         {
             if (cliente.Id <= 0)
                 throw new DomainValidationException("Debe especificar un ID válido para actualizar.");
-
-            if (string.IsNullOrWhiteSpace(cliente.Nombre))
-                throw new DomainValidationException("El nombre del cliente es obligatorio.");
 
             var existing = _unitOfWork.Clientes.GetById(cliente.Id).Result;
             if (existing == null)
@@ -81,9 +69,6 @@ namespace Libreria.Core.Services
             _unitOfWork.SaveChanges();
         }
 
-        // ======================
-        // DELETE: Eliminar cliente
-        // ======================
         public async Task DeleteAsync(int id)
         {
             var cliente = await _unitOfWork.Clientes.GetById(id);
@@ -93,8 +78,6 @@ namespace Libreria.Core.Services
             await _unitOfWork.Clientes.Delete(id);
             await _unitOfWork.SaveChangesAsync();
         }
-
-        //filtros
 
         public async Task<IEnumerable<Cliente>> GetFilteredAsync(ClienteQueryFilter filters)
         {
@@ -113,6 +96,24 @@ namespace Libreria.Core.Services
                 query = query.Where(c => c.Facturas.Any());
 
             return await query.ToListAsync();
+        }
+
+        // ======================
+        // DAPPER: Reporte liviano de clientes
+        // ======================
+        public async Task<IEnumerable<dynamic>> GetResumenAsync()
+        {
+            var sql = @"SELECT 
+                            c.Id,
+                            CONCAT(c.Nombre, ' ', c.Apellido) AS ClienteNombre,
+                            COUNT(f.Id) AS FacturasRegistradas,
+                            COALESCE(SUM(f.Total), 0) AS MontoTotal
+                        FROM Clientes c
+                        LEFT JOIN Facturas f ON f.ClienteId = c.Id
+                        GROUP BY c.Id, c.Nombre, c.Apellido
+                        ORDER BY ClienteNombre;";
+
+            return await _dapper.QueryAsync<dynamic>(sql);
         }
     }
 }

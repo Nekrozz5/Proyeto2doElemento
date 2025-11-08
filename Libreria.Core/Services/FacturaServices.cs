@@ -1,23 +1,29 @@
-﻿using Libreria.Core.Entities;
+﻿using Dapper;
+using Libreria.Core.Entities;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
-using Microsoft.EntityFrameworkCore;
 using Libreria.Core.QueryFilters;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Libreria.Core.Services
 {
     public class FacturaService
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IDapperContext _dapper; // ✅ se agrega para lecturas rápidas
 
-        public FacturaService(IUnitOfWork unitOfWork)
+        public FacturaService(IUnitOfWork unitOfWork, IDapperContext dapper)
         {
             _unitOfWork = unitOfWork;
+            _dapper = dapper;
         }
 
-        // ======================
-        // GET: Todas las facturas con cliente y detalles
-        // ======================
+        // ======================================================
+        // GET COMPLETO (EF Core): Facturas con Cliente y Detalles
+        // ======================================================
         public IEnumerable<Factura> GetAll()
         {
             var facturas = _unitOfWork.Facturas
@@ -34,9 +40,9 @@ namespace Libreria.Core.Services
             return facturas;
         }
 
-        // ======================
-        // GET: Factura por Id
-        // ======================
+        // ======================================================
+        // GET BY ID (EF Core)
+        // ======================================================
         public async Task<Factura?> GetByIdAsync(int id)
         {
             var factura = await _unitOfWork.Facturas
@@ -53,9 +59,9 @@ namespace Libreria.Core.Services
             return factura;
         }
 
-        // ======================
-        // POST: Crear nueva factura
-        // ======================
+        // ======================================================
+        // POST (EF Core): Crear nueva factura
+        // ======================================================
         public async Task AddAsync(Factura factura)
         {
             if (factura.ClienteId <= 0)
@@ -102,9 +108,9 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        // ======================
-        // PUT: Actualizar factura
-        // ======================
+        // ======================================================
+        // PUT (EF Core)
+        // ======================================================
         public void Update(Factura factura)
         {
             if (factura.Id <= 0)
@@ -114,9 +120,9 @@ namespace Libreria.Core.Services
             _unitOfWork.SaveChanges();
         }
 
-        // ======================
-        // DELETE
-        // ======================
+        // ======================================================
+        // DELETE (EF Core)
+        // ======================================================
         public async Task DeleteAsync(int id)
         {
             var factura = await _unitOfWork.Facturas.GetById(id);
@@ -127,20 +133,17 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        // filtros
-
+        // ======================================================
+        // GET FILTRADO (EF Core)
+        // ======================================================
         public async Task<IEnumerable<Factura>> GetFilteredAsync(FacturaQueryFilter filters)
         {
-            // 🔹 Definimos explícitamente como IQueryable
             IQueryable<Factura> query = _unitOfWork.Facturas.Query();
 
-            // 🔹 Luego agregamos los Include
             query = query
                 .AsNoTracking()
                 .Include(f => f.Cliente)
                 .Include(f => f.DetalleFacturas);
-
-            // 🔹 Aplicamos los filtros paso a paso
 
             if (filters.ClienteId.HasValue)
                 query = query.Where(f => f.ClienteId == filters.ClienteId.Value);
@@ -162,8 +165,25 @@ namespace Libreria.Core.Services
             if (filters.MaxTotal.HasValue)
                 query = query.Where(f => f.Total <= filters.MaxTotal.Value);
 
-            // 🔹 Devolvemos la lista resultante
             return await query.ToListAsync();
+        }
+
+        // ======================================================
+        // NUEVO MÉTODO (DAPPER): Resumen de facturas liviano
+        // ======================================================
+        public async Task<IEnumerable<dynamic>> GetResumenAsync()
+        {
+            var sql = @"SELECT 
+                            f.Id,
+                            f.Fecha,
+                            f.Total,
+                            CONCAT(c.Nombre, ' ', c.Apellido) AS ClienteNombre
+                        FROM Facturas f
+                        INNER JOIN Clientes c ON f.ClienteId = c.Id
+                        ORDER BY f.Fecha DESC";
+
+            var resumen = await _dapper.QueryAsync<dynamic>(sql);
+            return resumen;
         }
     }
 }
