@@ -1,5 +1,7 @@
-﻿using Libreria.Core.Entities;
+﻿using Libreria.Core.CustomEntities;
+using Libreria.Core.Entities;
 using Libreria.Core.QueryFilters;
+using Libreria.Api.Responses;
 using Libreria.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -63,7 +65,23 @@ namespace Libreria.Api.Controllers
         public async Task<IActionResult> GetFiltered([FromQuery] DetalleFacturaQueryFilter filters)
         {
             var detalles = await _detalleService.GetFilteredAsync(filters);
-            return Ok(detalles);
+
+            var pagination = new Pagination
+            {
+                TotalCount = detalles.TotalCount,
+                PageSize = detalles.PageSize,
+                CurrentPage = detalles.CurrentPage,
+                TotalPages = detalles.TotalPages,
+                HasNextPage = detalles.HasNextPage,
+                HasPreviousPage = detalles.HasPreviousPage
+            };
+
+            var response = new ApiResponse<IEnumerable<DetalleFactura>>(detalles)
+            {
+                Pagination = pagination
+            };
+
+            return Ok(response);
         }
 
         [HttpGet("resumen")]

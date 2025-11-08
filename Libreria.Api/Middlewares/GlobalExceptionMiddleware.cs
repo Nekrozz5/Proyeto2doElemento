@@ -1,7 +1,10 @@
 ﻿using Libreria.Core.Exceptions;
-using Libreria.Core.Responses; // ✅ importa tu ApiResponse
+using Libreria.Core.CustomEntities;
+using Libreria.Core.Enums;
+using Libreria.Api.Responses;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
+using System.Net;
 using System.Text.Json;
 
 namespace Libreria.Api.Middlewares
@@ -25,15 +28,15 @@ namespace Libreria.Api.Middlewares
             }
             catch (NotFoundException ex)
             {
-                await WriteErrorResponse(context, StatusCodes.Status404NotFound, ex.Message);
+                await WriteErrorResponse(context, HttpStatusCode.NotFound, ex.Message);
             }
             catch (DomainValidationException ex)
             {
-                await WriteErrorResponse(context, StatusCodes.Status400BadRequest, ex.Message, ex.Errors);
+                await WriteErrorResponse(context, HttpStatusCode.BadRequest, ex.Message);
             }
             catch (BusinessRuleException ex)
             {
-                await WriteErrorResponse(context, StatusCodes.Status409Conflict, ex.Message);
+                await WriteErrorResponse(context, HttpStatusCode.Conflict, ex.Message);
             }
             catch (FluentValidation.ValidationException ex)
             {
@@ -41,45 +44,67 @@ namespace Libreria.Api.Middlewares
                     .GroupBy(e => e.PropertyName)
                     .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
 
-                await WriteErrorResponse(context, StatusCodes.Status400BadRequest, "Error de validación.", errors);
+                await WriteErrorResponse(context, HttpStatusCode.BadRequest, "Error de validación.", errors);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Excepción no controlada");
-                await WriteErrorResponse(context, StatusCodes.Status500InternalServerError,
+                await WriteErrorResponse(context, HttpStatusCode.InternalServerError,
                     "Ocurrió un error interno del servidor.");
             }
         }
 
-        // ================================
-        // ✅ Respuesta unificada ApiResponse
-        // ================================
+        // ==================================================
+        // ✅ Versión actualizada: formato estandarizado JSON
+        // ==================================================
         private static async Task WriteErrorResponse(
             HttpContext context,
-            int statusCode,
+            HttpStatusCode statusCode,
             string message,
             IDictionary<string, string[]>? errors = null)
         {
-            var apiError = new ApiError
-            {
-                StatusCode = statusCode,
-                Type = ReasonPhrases.GetReasonPhrase(statusCode),
-                Detail = message,
-                Errors = errors
-            };
-
-            var response = new ApiResponse<object>(message, apiError);
-
-            context.Response.StatusCode = statusCode;
+            context.Response.StatusCode = (int)statusCode;
             context.Response.ContentType = "application/json";
 
-            var options = new JsonSerializerOptions
+            // Crear mensaje de error estándar
+            var messages = new[]
+            {
+                new Message
+                {
+                    Type = TypeMessage.error.ToString(),
+                    Description = message
+                }
+            };
+
+            // Crear ApiResponse con Messages
+            var response = new ApiResponse<object>(null)
+            {
+                Messages = messages
+            };
+
+            // Si hay errores de validación, los añadimos como metadato adicional
+            if (errors != null && errors.Any())
+            {
+                response.Messages = response.Messages
+                    .Concat(new[]
+                    {
+                        new Message
+                        {
+                            Type = TypeMessage.warning.ToString(),
+                            Description = "Errores de validación detectados en los campos enviados."
+                        }
+                    })
+                    .ToArray();
+            }
+
+            // Serializar
+            var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
             {
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 WriteIndented = true
-            };
+            });
 
-            await context.Response.WriteAsync(JsonSerializer.Serialize(response, options));
+            await context.Response.WriteAsync(json);
         }
     }
 }

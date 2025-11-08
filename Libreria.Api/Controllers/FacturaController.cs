@@ -1,6 +1,8 @@
 ﻿using AutoMapper;
+using Libreria.Core.CustomEntities;
 using Libreria.Core.Entities;
 using Libreria.Core.QueryFilters;
+using Libreria.Api.Responses;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
@@ -92,13 +94,23 @@ namespace Libreria.Api.Controllers
         public async Task<IActionResult> GetFiltered([FromQuery] FacturaQueryFilter filters)
         {
             var facturas = await _facturaService.GetFilteredAsync(filters);
-            return Ok(facturas);
-        }
-        [HttpGet("resumen")]
-        public async Task<IActionResult> GetResumen()
-        {
-            var resumen = await _facturaService.GetResumenAsync();
-            return Ok(resumen);
+
+            var pagination = new Pagination
+            {
+                TotalCount = facturas.TotalCount,
+                PageSize = facturas.PageSize,
+                CurrentPage = facturas.CurrentPage,
+                TotalPages = facturas.TotalPages,
+                HasNextPage = facturas.HasNextPage,
+                HasPreviousPage = facturas.HasPreviousPage
+            };
+
+            var response = new ApiResponse<IEnumerable<Factura>>(facturas)
+            {
+                Pagination = pagination
+            };
+
+            return Ok(response);
         }
     }
 }

@@ -1,11 +1,13 @@
-﻿using Dapper; // ✅ Necesario para DynamicParameters
+﻿using Dapper;
+using Libreria.Core.CustomEntities;
 using Libreria.Core.Entities;
+using Libreria.Core.Enums;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
 using Libreria.Core.QueryFilters;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Libreria.Core.Services
@@ -13,7 +15,7 @@ namespace Libreria.Core.Services
     public class LibroService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IDapperContext _dapper; // ✅ Dapper inyectado
+        private readonly IDapperContext _dapper;
 
         public LibroService(IUnitOfWork unitOfWork, IDapperContext dapper)
         {
@@ -22,19 +24,15 @@ namespace Libreria.Core.Services
         }
 
         // =====================================================
-        // MÉTODO USADO POR EL CONTROLLER (sin cambiar la firma)
+        // MÉTODOS CRUD BASE (sin cambios)
         // =====================================================
         public IEnumerable<Libro> GetAll()
         {
-            // Dapper no tiene métodos síncronos → llamamos un método async internamente.
             var task = GetAllAsync();
-            task.Wait(); // Esperar resultado (sin alterar el controller)
+            task.Wait();
             return task.Result;
         }
 
-        // =====================================================
-        // Implementación interna con Dapper
-        // =====================================================
         private async Task<IEnumerable<Libro>> GetAllAsync()
         {
             var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
@@ -50,9 +48,6 @@ namespace Libreria.Core.Services
             return libros;
         }
 
-        // =====================================================
-        // GET BY ID (Dapper también)
-        // =====================================================
         public async Task<Libro?> GetByIdAsync(int id)
         {
             var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
@@ -69,9 +64,6 @@ namespace Libreria.Core.Services
             return libro;
         }
 
-        // =====================================================
-        // CREATE / UPDATE / DELETE (EF CORE)
-        // =====================================================
         public async Task AddAsync(Libro libro)
         {
             if (string.IsNullOrWhiteSpace(libro.Titulo))
@@ -115,16 +107,15 @@ namespace Libreria.Core.Services
         }
 
         // =====================================================
-        // FILTROS (Dapper también)
+        // FILTROS CON PAGINACIÓN + ESTANDARIZACIÓN DE RESPUESTA
         // =====================================================
-        public async Task<IEnumerable<Libro>> GetFilteredAsync(LibroQueryFilter filters)
+        public async Task<ResponseData> GetFilteredAsync(LibroQueryFilter filters)
         {
             var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
                                l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
                         FROM Libros l
                         LEFT JOIN Autores a ON l.AutorId = a.Id
                         WHERE 1=1 ";
-
             var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Titulo))
@@ -158,8 +149,49 @@ namespace Libreria.Core.Services
             if (filters.Disponibles == true)
                 sql += " AND l.Stock > 0";
 
-            var result = await _dapper.QueryAsync<Libro>(sql, parameters);
-            return result;
+            // === Conteo total ===
+            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS TotalCountQuery";
+            var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
+
+            // === Paginación ===
+            var offset = (filters.PageNumber - 1) * filters.PageSize;
+            sql += " ORDER BY l.Id LIMIT @PageSize OFFSET @Offset";
+            parameters.Add("@PageSize", filters.PageSize);
+            parameters.Add("@Offset", offset);
+
+            var items = await _dapper.QueryAsync<Libro>(sql, parameters);
+            var pagedList = new PagedList<object>(items.Cast<object>().ToList(), totalCount, filters.PageNumber, filters.PageSize);
+
+            if (items.Any())
+            {
+                return new ResponseData
+                {
+                    Pagination = pagedList,
+                    Messages = new[]
+                    {
+                        new Message
+                        {
+                            Type = TypeMessage.information.ToString(),
+                            Description = "Libros recuperados correctamente."
+                        }
+                    },
+                    StatusCode = HttpStatusCode.OK
+                };
+            }
+
+            return new ResponseData
+            {
+                Pagination = pagedList,
+                Messages = new[]
+                {
+                    new Message
+                    {
+                        Type = TypeMessage.warning.ToString(),
+                        Description = "No se encontraron libros con los filtros aplicados."
+                    }
+                },
+                StatusCode = HttpStatusCode.OK
+            };
         }
     }
 }

@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Libreria.Core.CustomEntities;
+
 
 namespace Libreria.Core.Services
 {
@@ -136,36 +138,65 @@ namespace Libreria.Core.Services
         // ======================================================
         // GET FILTRADO (EF Core)
         // ======================================================
-        public async Task<IEnumerable<Factura>> GetFilteredAsync(FacturaQueryFilter filters)
+        public async Task<PagedList<Factura>> GetFilteredAsync(FacturaQueryFilter filters)
         {
-            IQueryable<Factura> query = _unitOfWork.Facturas.Query();
-
-            query = query
-                .AsNoTracking()
-                .Include(f => f.Cliente)
-                .Include(f => f.DetalleFacturas);
+            var sql = @"SELECT 
+                    f.Id, f.Fecha, f.Total,
+                    f.ClienteId,
+                    CONCAT(c.Nombre, ' ', c.Apellido) AS ClienteNombre
+                FROM Facturas f
+                INNER JOIN Clientes c ON f.ClienteId = c.Id
+                WHERE 1=1 ";
+            var parameters = new DynamicParameters();
 
             if (filters.ClienteId.HasValue)
-                query = query.Where(f => f.ClienteId == filters.ClienteId.Value);
+            {
+                sql += " AND f.ClienteId = @ClienteId";
+                parameters.Add("@ClienteId", filters.ClienteId.Value);
+            }
 
             if (!string.IsNullOrWhiteSpace(filters.ClienteNombreContains))
-                query = query.Where(f =>
-                    (f.Cliente!.Nombre + " " + f.Cliente!.Apellido)
-                    .Contains(filters.ClienteNombreContains));
+            {
+                sql += " AND LOWER(CONCAT(c.Nombre, ' ', c.Apellido)) LIKE CONCAT('%', LOWER(@Nombre), '%')";
+                parameters.Add("@Nombre", filters.ClienteNombreContains);
+            }
 
             if (filters.FechaDesde.HasValue)
-                query = query.Where(f => f.Fecha >= filters.FechaDesde.Value);
+            {
+                sql += " AND f.Fecha >= @FechaDesde";
+                parameters.Add("@FechaDesde", filters.FechaDesde.Value);
+            }
 
             if (filters.FechaHasta.HasValue)
-                query = query.Where(f => f.Fecha <= filters.FechaHasta.Value);
+            {
+                sql += " AND f.Fecha <= @FechaHasta";
+                parameters.Add("@FechaHasta", filters.FechaHasta.Value);
+            }
 
             if (filters.MinTotal.HasValue)
-                query = query.Where(f => f.Total >= filters.MinTotal.Value);
+            {
+                sql += " AND f.Total >= @MinTotal";
+                parameters.Add("@MinTotal", filters.MinTotal.Value);
+            }
 
             if (filters.MaxTotal.HasValue)
-                query = query.Where(f => f.Total <= filters.MaxTotal.Value);
+            {
+                sql += " AND f.Total <= @MaxTotal";
+                parameters.Add("@MaxTotal", filters.MaxTotal.Value);
+            }
 
-            return await query.ToListAsync();
+            // ===== Total =====
+            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS TotalCountQuery";
+            var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
+
+            // ===== Paginación =====
+            var offset = (filters.PageNumber - 1) * filters.PageSize;
+            sql += " ORDER BY f.Fecha DESC LIMIT @PageSize OFFSET @Offset";
+            parameters.Add("@PageSize", filters.PageSize);
+            parameters.Add("@Offset", offset);
+
+            var items = await _dapper.QueryAsync<Factura>(sql, parameters);
+            return new PagedList<Factura>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
         // ======================================================
@@ -185,5 +216,7 @@ namespace Libreria.Core.Services
             var resumen = await _dapper.QueryAsync<dynamic>(sql);
             return resumen;
         }
+
+
     }
 }

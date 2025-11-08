@@ -1,6 +1,6 @@
 ﻿namespace Libreria.Core.QueryFilters
 {
-    public class LibroQueryFilter
+    public class LibroQueryFilter : PaginationQueryFilter
     {
         public string? Titulo { get; set; }
         public string? Autor { get; set; }

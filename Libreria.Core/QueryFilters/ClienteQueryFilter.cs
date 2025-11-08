@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Libreria.Core.QueryFilters
 {
-    public class ClienteQueryFilter
+    public class ClienteQueryFilter : PaginationQueryFilter
     {
         public string? Nombre { get; set; }
         public string? Apellido { get; set; }

@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Libreria.Core.CustomEntities;
+
 
 namespace Libreria.Core.Services
 {
@@ -49,37 +51,45 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<DetalleFactura>> GetFilteredAsync(DetalleFacturaQueryFilter filters)
+        public async Task<PagedList<DetalleFactura>> GetFilteredAsync(DetalleFacturaQueryFilter filters)
         {
-            IQueryable<DetalleFactura> query = _unitOfWork.DetallesFactura.Query();
-
-            query = query
-                .AsNoTracking()
-                .Include(d => d.Factura)
-                .Include(d => d.Libro);
+            var sql = @"SELECT 
+                    d.Id, d.FacturaId, d.LibroId, d.Cantidad, d.PrecioUnitario, d.Subtotal,
+                    l.Titulo AS LibroTitulo
+                FROM DetallesFactura d
+                INNER JOIN Libros l ON d.LibroId = l.Id
+                WHERE 1=1 ";
+            var parameters = new DynamicParameters();
 
             if (filters.FacturaId.HasValue)
-                query = query.Where(d => d.FacturaId == filters.FacturaId.Value);
+            {
+                sql += " AND d.FacturaId = @FacturaId";
+                parameters.Add("@FacturaId", filters.FacturaId);
+            }
 
             if (filters.LibroId.HasValue)
-                query = query.Where(d => d.LibroId == filters.LibroId.Value);
+            {
+                sql += " AND d.LibroId = @LibroId";
+                parameters.Add("@LibroId", filters.LibroId);
+            }
 
             if (!string.IsNullOrWhiteSpace(filters.LibroTituloContains))
-                query = query.Where(d => d.Libro != null && d.Libro.Titulo.Contains(filters.LibroTituloContains));
+            {
+                sql += " AND LOWER(l.Titulo) LIKE CONCAT('%', LOWER(@Titulo), '%')";
+                parameters.Add("@Titulo", filters.LibroTituloContains);
+            }
 
-            if (filters.MinCantidad.HasValue)
-                query = query.Where(d => d.Cantidad >= filters.MinCantidad.Value);
+            // Totales
+            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS CountQuery";
+            var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            if (filters.MaxCantidad.HasValue)
-                query = query.Where(d => d.Cantidad <= filters.MaxCantidad.Value);
+            var offset = (filters.PageNumber - 1) * filters.PageSize;
+            sql += " ORDER BY d.FacturaId LIMIT @PageSize OFFSET @Offset";
+            parameters.Add("@PageSize", filters.PageSize);
+            parameters.Add("@Offset", offset);
 
-            if (filters.MinPrecioUnitario.HasValue)
-                query = query.Where(d => d.PrecioUnitario >= filters.MinPrecioUnitario.Value);
-
-            if (filters.MaxPrecioUnitario.HasValue)
-                query = query.Where(d => d.PrecioUnitario <= filters.MaxPrecioUnitario.Value);
-
-            return await query.ToListAsync();
+            var items = await _dapper.QueryAsync<DetalleFactura>(sql, parameters);
+            return new PagedList<DetalleFactura>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
         // ======================

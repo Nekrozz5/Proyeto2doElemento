@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace Libreria.Core.QueryFilters
 {
-    public class FacturaQueryFilter
+    public class FacturaQueryFilter : PaginationQueryFilter
     {
         public int? ClienteId { get; set; }
         public string? ClienteNombreContains { get; set; }

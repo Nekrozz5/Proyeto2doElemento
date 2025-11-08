@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Libreria.Core.CustomEntities;
 
 namespace Libreria.Core.Services
 {
@@ -79,23 +80,47 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public async Task<IEnumerable<Cliente>> GetFilteredAsync(ClienteQueryFilter filters)
+        public async Task<PagedList<Cliente>> GetFilteredAsync(ClienteQueryFilter filters)
         {
-            var query = _unitOfWork.Clientes.Query().AsNoTracking();
+            var sql = @"SELECT 
+                    c.Id, c.Nombre, c.Apellido, c.Email,
+                    COUNT(f.Id) AS FacturasCount,
+                    COALESCE(SUM(f.Total), 0) AS TotalFacturado
+                FROM Clientes c
+                LEFT JOIN Facturas f ON f.ClienteId = c.Id
+                WHERE 1=1 ";
+            var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Nombre))
-                query = query.Where(c => c.Nombre.Contains(filters.Nombre));
+            {
+                sql += " AND LOWER(c.Nombre) LIKE CONCAT('%', LOWER(@Nombre), '%')";
+                parameters.Add("@Nombre", filters.Nombre);
+            }
 
             if (!string.IsNullOrWhiteSpace(filters.Apellido))
-                query = query.Where(c => c.Apellido.Contains(filters.Apellido));
+            {
+                sql += " AND LOWER(c.Apellido) LIKE CONCAT('%', LOWER(@Apellido), '%')";
+                parameters.Add("@Apellido", filters.Apellido);
+            }
 
             if (!string.IsNullOrWhiteSpace(filters.EmailContains))
-                query = query.Where(c => c.Email.Contains(filters.EmailContains));
+            {
+                sql += " AND LOWER(c.Email) LIKE CONCAT('%', LOWER(@Email), '%')";
+                parameters.Add("@Email", filters.EmailContains);
+            }
 
-            if (filters.ConFacturas == true)
-                query = query.Where(c => c.Facturas.Any());
+            // Total
+            var countSql = $"SELECT COUNT(*) FROM ({sql} GROUP BY c.Id) AS CountQuery";
+            var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            return await query.ToListAsync();
+            // Paginación
+            var offset = (filters.PageNumber - 1) * filters.PageSize;
+            sql += " GROUP BY c.Id ORDER BY c.Nombre LIMIT @PageSize OFFSET @Offset";
+            parameters.Add("@PageSize", filters.PageSize);
+            parameters.Add("@Offset", offset);
+
+            var items = await _dapper.QueryAsync<Cliente>(sql, parameters);
+            return new PagedList<Cliente>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
         // ======================

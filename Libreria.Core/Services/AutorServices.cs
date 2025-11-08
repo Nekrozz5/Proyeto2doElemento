@@ -6,6 +6,8 @@ using Libreria.Core.QueryFilters;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
+using Libreria.Core.CustomEntities;
+
 using System.Threading.Tasks;
 
 namespace Libreria.Core.Services
@@ -91,20 +93,40 @@ namespace Libreria.Core.Services
         // ======================
         // FILTROS (EF Core)
         // ======================
-        public async Task<IEnumerable<Autor>> GetFilteredAsync(AutorQueryFilter filters)
+        public async Task<PagedList<Autor>> GetFilteredAsync(AutorQueryFilter filters)
         {
-            var query = _unitOfWork.Autores.Query().AsNoTracking();
+            var sql = @"SELECT 
+                    a.Id, a.Nombre, a.Apellido,
+                    COUNT(l.Id) AS LibrosPublicados
+                FROM Autores a
+                LEFT JOIN Libros l ON a.Id = l.AutorId
+                WHERE 1=1 ";
+            var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Nombre))
-                query = query.Where(a => a.Nombre.Contains(filters.Nombre));
+            {
+                sql += " AND LOWER(a.Nombre) LIKE CONCAT('%', LOWER(@Nombre), '%')";
+                parameters.Add("@Nombre", filters.Nombre);
+            }
 
             if (!string.IsNullOrWhiteSpace(filters.Apellido))
-                query = query.Where(a => a.Apellido.Contains(filters.Apellido));
+            {
+                sql += " AND LOWER(a.Apellido) LIKE CONCAT('%', LOWER(@Apellido), '%')";
+                parameters.Add("@Apellido", filters.Apellido);
+            }
 
-            if (filters.ConLibros == true)
-                query = query.Where(a => a.Libros.Any());
+            // Total de registros
+            var countSql = $"SELECT COUNT(*) FROM ({sql} GROUP BY a.Id) AS CountQuery";
+            var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            return await query.ToListAsync();
+            // Paginación
+            var offset = (filters.PageNumber - 1) * filters.PageSize;
+            sql += " GROUP BY a.Id ORDER BY a.Nombre LIMIT @PageSize OFFSET @Offset";
+            parameters.Add("@PageSize", filters.PageSize);
+            parameters.Add("@Offset", offset);
+
+            var items = await _dapper.QueryAsync<Autor>(sql, parameters);
+            return new PagedList<Autor>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
         // ======================
