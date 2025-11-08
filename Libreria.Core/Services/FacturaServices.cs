@@ -2,6 +2,7 @@
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Libreria.Core.QueryFilters;
 
 namespace Libreria.Core.Services
 {
@@ -124,6 +125,45 @@ namespace Libreria.Core.Services
 
             await _unitOfWork.Facturas.Delete(id);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        // filtros
+
+        public async Task<IEnumerable<Factura>> GetFilteredAsync(FacturaQueryFilter filters)
+        {
+            // 🔹 Definimos explícitamente como IQueryable
+            IQueryable<Factura> query = _unitOfWork.Facturas.Query();
+
+            // 🔹 Luego agregamos los Include
+            query = query
+                .AsNoTracking()
+                .Include(f => f.Cliente)
+                .Include(f => f.DetalleFacturas);
+
+            // 🔹 Aplicamos los filtros paso a paso
+
+            if (filters.ClienteId.HasValue)
+                query = query.Where(f => f.ClienteId == filters.ClienteId.Value);
+
+            if (!string.IsNullOrWhiteSpace(filters.ClienteNombreContains))
+                query = query.Where(f =>
+                    (f.Cliente!.Nombre + " " + f.Cliente!.Apellido)
+                    .Contains(filters.ClienteNombreContains));
+
+            if (filters.FechaDesde.HasValue)
+                query = query.Where(f => f.Fecha >= filters.FechaDesde.Value);
+
+            if (filters.FechaHasta.HasValue)
+                query = query.Where(f => f.Fecha <= filters.FechaHasta.Value);
+
+            if (filters.MinTotal.HasValue)
+                query = query.Where(f => f.Total >= filters.MinTotal.Value);
+
+            if (filters.MaxTotal.HasValue)
+                query = query.Where(f => f.Total <= filters.MaxTotal.Value);
+
+            // 🔹 Devolvemos la lista resultante
+            return await query.ToListAsync();
         }
     }
 }

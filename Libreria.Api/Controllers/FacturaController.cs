@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using Libreria.Core.Entities;
+using Libreria.Core.QueryFilters;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
@@ -84,6 +85,14 @@ namespace Libreria.Api.Controllers
         {
             await _facturaService.DeleteAsync(id);
             return Ok("Factura eliminada correctamente.");
+
+        }
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetFiltered([FromQuery] FacturaQueryFilter filters)
+        {
+            var facturas = await _facturaService.GetFilteredAsync(filters);
+            return Ok(facturas);
         }
     }
 }

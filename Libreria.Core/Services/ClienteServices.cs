@@ -1,6 +1,8 @@
 ﻿using Libreria.Core.Entities;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
+using Libreria.Core.QueryFilters;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -90,6 +92,27 @@ namespace Libreria.Core.Services
 
             await _unitOfWork.Clientes.Delete(id);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        //filtros
+
+        public async Task<IEnumerable<Cliente>> GetFilteredAsync(ClienteQueryFilter filters)
+        {
+            var query = _unitOfWork.Clientes.Query().AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(filters.Nombre))
+                query = query.Where(c => c.Nombre.Contains(filters.Nombre));
+
+            if (!string.IsNullOrWhiteSpace(filters.Apellido))
+                query = query.Where(c => c.Apellido.Contains(filters.Apellido));
+
+            if (!string.IsNullOrWhiteSpace(filters.EmailContains))
+                query = query.Where(c => c.Email.Contains(filters.EmailContains));
+
+            if (filters.ConFacturas == true)
+                query = query.Where(c => c.Facturas.Any());
+
+            return await query.ToListAsync();
         }
     }
 }

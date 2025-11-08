@@ -1,4 +1,5 @@
 ﻿using Libreria.Core.Entities;
+using Libreria.Core.QueryFilters;
 using Libreria.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -55,5 +56,13 @@ namespace Libreria.Api.Controllers
             await _clienteService.DeleteAsync(id);
             return Ok("Cliente eliminado correctamente.");
         }
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetFiltered([FromQuery] ClienteQueryFilter filters)
+        {
+            var clientes = await _clienteService.GetFilteredAsync(filters);
+            return Ok(clientes);
+        }
+
     }
 }

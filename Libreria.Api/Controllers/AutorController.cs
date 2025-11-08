@@ -1,4 +1,5 @@
 ﻿using Libreria.Core.Entities;
+using Libreria.Core.QueryFilters;
 using Libreria.Core.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -55,5 +56,14 @@ namespace Libreria.Api.Controllers
             await _autorService.DeleteAsync(id);
             return Ok("Autor eliminado correctamente.");
         }
+
+        [HttpGet("filter")]
+        public async Task<IActionResult> GetFiltered([FromQuery] AutorQueryFilter filters)
+        {
+            var autores = await _autorService.GetFilteredAsync(filters);
+            return Ok(autores);
+        }
+
+
     }
 }

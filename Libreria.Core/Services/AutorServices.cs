@@ -1,6 +1,8 @@
 ﻿using Libreria.Core.Entities;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
+using Libreria.Core.QueryFilters;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -84,6 +86,23 @@ namespace Libreria.Core.Services
 
             await _unitOfWork.Autores.Delete(id);
             await _unitOfWork.SaveChangesAsync();
+        }
+
+        //filtros
+        public async Task<IEnumerable<Autor>> GetFilteredAsync(AutorQueryFilter filters)
+        {
+            var query = _unitOfWork.Autores.Query().AsNoTracking();
+
+            if (!string.IsNullOrWhiteSpace(filters.Nombre))
+                query = query.Where(a => a.Nombre.Contains(filters.Nombre));
+
+            if (!string.IsNullOrWhiteSpace(filters.Apellido))
+                query = query.Where(a => a.Apellido.Contains(filters.Apellido));
+
+            if (filters.ConLibros == true)
+                query = query.Where(a => a.Libros.Any());
+
+            return await query.ToListAsync();
         }
     }
 }

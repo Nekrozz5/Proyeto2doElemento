@@ -93,30 +93,39 @@ namespace Libreria.Core.Services
                 .AsNoTracking()
                 .AsQueryable();
 
-            // Filtros dinámicos
+            // Filtro por título
             if (!string.IsNullOrWhiteSpace(filters.Titulo))
-                query = query.Where(l => l.Titulo.Contains(filters.Titulo));
+                query = query.Where(l => l.Titulo.ToLower().Contains(filters.Titulo.Trim().ToLower()));
 
+            // --- AUTOR: búsqueda robusta (nombre, apellido o nombre completo) ---
             if (!string.IsNullOrWhiteSpace(filters.Autor))
-                query = query.Where(l => l.Autor.Nombre.Contains(filters.Autor));
+            {
+                var term = filters.Autor.Trim().ToLower();
 
+                query = query.Where(l =>
+                    l.Autor != null && (
+                        ((l.Autor.Nombre ?? "").ToLower().Contains(term)) ||
+                        ((l.Autor.Apellido ?? "").ToLower().Contains(term)) ||
+                        (((l.Autor.Nombre ?? "") + " " + (l.Autor.Apellido ?? "")).ToLower().Contains(term))
+                    )
+                );
+            }
+
+            // Rango de precios
             if (filters.MinPrecio.HasValue)
                 query = query.Where(l => l.Precio >= filters.MinPrecio.Value);
 
             if (filters.MaxPrecio.HasValue)
                 query = query.Where(l => l.Precio <= filters.MaxPrecio.Value);
 
+            // Libros disponibles
             if (filters.Disponibles == true)
                 query = query.Where(l => l.Stock > 0);
 
             var result = await query.ToListAsync();
 
-            if (!result.Any())
-                throw new NotFoundException("No se encontraron libros con los filtros aplicados.");
-
+            // Si no hay resultados, devolvemos lista vacía (no excepción)
             return result;
         }
     }
 }
-    
-
