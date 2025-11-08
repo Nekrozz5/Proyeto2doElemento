@@ -7,7 +7,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using Libreria.Core.CustomEntities;
-
 using System.Threading.Tasks;
 
 namespace Libreria.Core.Services
@@ -23,25 +22,60 @@ namespace Libreria.Core.Services
             _dapper = dapper;
         }
 
-        // ======================
-        // GET: Todos los autores (EF Core)
-        // ======================
-        public IEnumerable<Autor> GetAll()
+        // ==========================================================
+        // GET: Todos los autores (con solo Id y Titulo de sus libros)
+        // ==========================================================
+        public IEnumerable<object> GetAll()
         {
-            var autores = _unitOfWork.Autores.GetAll();
+            var autores = _unitOfWork.Autores
+                .Query()
+                .Include(a => a.Libros)
+                .AsNoTracking()
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Nombre,
+                    a.Apellido,
+                    a.FechaRegistro,
+                    a.FechaActualizacion,
+                    Libros = a.Libros.Select(l => new
+                    {
+                        l.Id,
+                        l.Titulo
+                    })
+                })
+                .ToList();
 
-            if (autores == null || !autores.Any())
+            if (!autores.Any())
                 throw new NotFoundException("No se encontraron autores registrados.");
 
             return autores;
         }
 
-        // ======================
-        // GET: Autor por Id (EF Core)
-        // ======================
-        public async Task<Autor?> GetByIdAsync(int id)
+        // ==========================================================
+        // GET: Autor por Id (con solo Id y Titulo de sus libros)
+        // ==========================================================
+        public async Task<object?> GetByIdAsync(int id)
         {
-            var autor = await _unitOfWork.Autores.GetById(id);
+            var autor = await _unitOfWork.Autores
+                .Query()
+                .Include(a => a.Libros)
+                .AsNoTracking()
+                .Where(a => a.Id == id)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Nombre,
+                    a.Apellido,
+                    a.FechaRegistro,
+                    a.FechaActualizacion,
+                    Libros = a.Libros.Select(l => new
+                    {
+                        l.Id,
+                        l.Titulo
+                    })
+                })
+                .FirstOrDefaultAsync();
 
             if (autor == null)
                 throw new NotFoundException($"No se encontró el autor con ID {id}.");
@@ -49,9 +83,9 @@ namespace Libreria.Core.Services
             return autor;
         }
 
-        // ======================
+        // ==========================================================
         // POST: Crear nuevo autor
-        // ======================
+        // ==========================================================
         public async Task AddAsync(Autor autor)
         {
             if (string.IsNullOrWhiteSpace(autor.Nombre))
@@ -61,9 +95,9 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        // ======================
+        // ==========================================================
         // PUT: Actualizar autor
-        // ======================
+        // ==========================================================
         public void Update(Autor autor)
         {
             if (autor.Id <= 0)
@@ -77,9 +111,9 @@ namespace Libreria.Core.Services
             _unitOfWork.SaveChanges();
         }
 
-        // ======================
+        // ==========================================================
         // DELETE: Eliminar autor
-        // ======================
+        // ==========================================================
         public async Task DeleteAsync(int id)
         {
             var autor = await _unitOfWork.Autores.GetById(id);
@@ -90,9 +124,9 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
-        // ======================
-        // FILTROS (EF Core)
-        // ======================
+        // ==========================================================
+        // FILTROS Y RESUMEN (Dapper)
+        // ==========================================================
         public async Task<PagedList<Autor>> GetFilteredAsync(AutorQueryFilter filters)
         {
             var sql = @"SELECT 
@@ -115,11 +149,9 @@ namespace Libreria.Core.Services
                 parameters.Add("@Apellido", filters.Apellido);
             }
 
-            // Total de registros
             var countSql = $"SELECT COUNT(*) FROM ({sql} GROUP BY a.Id) AS CountQuery";
             var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            // Paginación
             var offset = (filters.PageNumber - 1) * filters.PageSize;
             sql += " GROUP BY a.Id ORDER BY a.Nombre LIMIT @PageSize OFFSET @Offset";
             parameters.Add("@PageSize", filters.PageSize);
@@ -129,9 +161,6 @@ namespace Libreria.Core.Services
             return new PagedList<Autor>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
-        // ======================
-        // DAPPER: Reporte liviano de autores
-        // ======================
         public async Task<IEnumerable<dynamic>> GetResumenAsync()
         {
             var sql = @"SELECT 

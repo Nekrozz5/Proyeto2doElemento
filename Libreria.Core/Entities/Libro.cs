@@ -1,4 +1,5 @@
 ﻿using Swashbuckle.AspNetCore.Annotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Libreria.Core.Entities
 {
@@ -32,6 +33,7 @@ namespace Libreria.Core.Entities
         /// Precio actual del libro.
         /// </summary>
         /// <example>85.50</example>
+        [Column(TypeName = "decimal(10,2)")]
         public decimal Precio { get; set; }
 
         /// <summary>

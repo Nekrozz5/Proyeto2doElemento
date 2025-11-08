@@ -55,7 +55,7 @@ namespace Libreria.Api.Middlewares
         }
 
         // ==================================================
-        // ✅ Versión actualizada: formato estandarizado JSON
+        // Versión actualizada: formato estandarizado JSON
         // ==================================================
         private static async Task WriteErrorResponse(
             HttpContext context,

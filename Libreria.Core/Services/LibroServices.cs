@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using Libreria.Core.CustomEntities;
 using Libreria.Core.Entities;
+using Microsoft.EntityFrameworkCore;
 using Libreria.Core.Enums;
 using Libreria.Core.Exceptions;
 using Libreria.Core.Interfaces;
@@ -16,11 +17,13 @@ namespace Libreria.Core.Services
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IDapperContext _dapper;
+        private readonly IDbConnectionFactory _connFactory;
 
-        public LibroService(IUnitOfWork unitOfWork, IDapperContext dapper)
+        public LibroService(IUnitOfWork unitOfWork, IDapperContext dapper, IDbConnectionFactory connFactory)
         {
             _unitOfWork = unitOfWork;
             _dapper = dapper;
+            _connFactory = connFactory;
         }
 
         // =====================================================
@@ -35,28 +38,77 @@ namespace Libreria.Core.Services
 
         private async Task<IEnumerable<Libro>> GetAllAsync()
         {
-            var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
-                               l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
-                        FROM Libros l
-                        LEFT JOIN Autores a ON l.AutorId = a.Id";
+            using var connection = _connFactory.CreateConnection();
 
-            var libros = await _dapper.QueryAsync<Libro>(sql);
+            var sql = @"
+        SELECT 
+            l.Id, 
+            l.Titulo, 
+            l.AnioPublicacion, 
+            l.Descripcion, 
+            l.Precio, 
+            l.Stock, 
+            l.AutorId,
+            a.Id AS AutorSplit,
+            a.Nombre,
+            a.Apellido
+        FROM Libros l
+        INNER JOIN Autores a ON l.AutorId = a.Id;
+    ";
 
-            if (libros == null || !libros.Any())
+            var libros = await connection.QueryAsync<Libro, Autor, Libro>(
+                sql,
+                (libro, autor) =>
+                {
+                    libro.Autor = autor;
+                    return libro;
+                },
+                splitOn: "AutorSplit"
+            );
+
+            if (!libros.Any())
                 throw new NotFoundException("No se encontraron libros registrados.");
 
             return libros;
         }
 
+
+
+
+
         public async Task<Libro?> GetByIdAsync(int id)
         {
-            var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
-                               l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
-                        FROM Libros l
-                        LEFT JOIN Autores a ON l.AutorId = a.Id
-                        WHERE l.Id = @id";
+            using var connection = _connFactory.CreateConnection();
 
-            var libro = await _dapper.QueryFirstOrDefaultAsync<Libro>(sql, new { id });
+            var sql = @"
+        SELECT 
+            l.Id, 
+            l.Titulo, 
+            l.AnioPublicacion, 
+            l.Descripcion, 
+            l.Precio, 
+            l.Stock, 
+            l.AutorId,
+            a.Id AS AutorSplit,
+            a.Nombre,
+            a.Apellido
+        FROM Libros l
+        LEFT JOIN Autores a ON l.AutorId = a.Id
+        WHERE l.Id = @id;
+    ";
+
+            var result = await connection.QueryAsync<Libro, Autor, Libro>(
+                sql,
+                (libro, autor) =>
+                {
+                    libro.Autor = autor;
+                    return libro;
+                },
+                new { id },
+                splitOn: "AutorSplit"
+            );
+
+            var libro = result.FirstOrDefault();
 
             if (libro == null)
                 throw new NotFoundException($"No se encontró el libro con ID {id}.");

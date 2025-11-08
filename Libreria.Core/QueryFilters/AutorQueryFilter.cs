@@ -10,7 +10,7 @@ namespace Libreria.Core.QueryFilters
     {
         public string? Nombre { get; set; }
         public string? Apellido { get; set; }
-        public bool? ConLibros { get; set; }  // true => solo autores con >=1 libro
+        public bool? ConLibros { get; set; }  
         
     }
 }

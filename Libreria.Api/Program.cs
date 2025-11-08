@@ -59,7 +59,7 @@ builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<DetalleFacturaService>();
 
 // ==================================================
-// 🔹 FLUENT VALIDATION + MVC
+//  FLUENT VALIDATION + MVC
 // ==================================================
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
@@ -72,7 +72,7 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LibroValidator>();
 
 // ==================================================
-// 🔹 CONFIGURAR SWAGGER
+//  CONFIGURAR SWAGGER
 // ==================================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -89,7 +89,7 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🔹 Incluir comentarios XML de controladores y entidades
+    // Incluir comentarios XML de controladores y entidades
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
 
@@ -99,17 +99,17 @@ builder.Services.AddSwaggerGen(options =>
     }
 
 
-    // 🔹 Mostrar anotaciones de tipos complejos (SwaggerSchema)
+    //  Mostrar anotaciones de tipos complejos (SwaggerSchema)
     options.EnableAnnotations();
 });
 
 // ==================================================
-// 🔹 CONSTRUIR APLICACIÓN
+//  CONSTRUIR APLICACIÓN
 // ==================================================
 var app = builder.Build();
 
 // ==================================================
-// 🔹 MIDDLEWARE GLOBAL DE EXCEPCIONES
+//  MIDDLEWARE GLOBAL DE EXCEPCIONES
 // ==================================================
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
@@ -127,7 +127,7 @@ if (app.Environment.IsDevelopment())
 }
 
 // ==================================================
-// 🔹 PIPELINE GENERAL
+//  PIPELINE GENERAL
 // ==================================================
 app.UseHttpsRedirection();
 app.UseAuthorization();

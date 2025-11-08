@@ -7,7 +7,7 @@ namespace Libreria.Core.Interfaces
     public interface IBaseRepository<T> where T : BaseEntity
     {
         IEnumerable<T> GetAll();
-        IQueryable<T> Query();  // <-- 🔹 Agregado para poder usar Include()
+        IQueryable<T> Query();  
 
         Task<T?> GetById(int id);
         Task Add(T entity);

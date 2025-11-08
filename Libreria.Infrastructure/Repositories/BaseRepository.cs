@@ -48,7 +48,13 @@ namespace Libreria.Infrastructure.Repositories
         // Actualizar un registro existente
         public void Update(T entity)
         {
-            _entities.Update(entity);
+            var local = _entities.Local.FirstOrDefault(e => e.Id == entity.Id);
+            if (local != null)
+            {
+                _context.Entry(local).State = EntityState.Detached;
+            }
+            _entities.Attach(entity);
+            _context.Entry(entity).State = EntityState.Modified;
         }
 
         // Eliminar un registro por ID (sin guardar aún)

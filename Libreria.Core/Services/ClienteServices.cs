@@ -6,8 +6,8 @@ using Libreria.Core.QueryFilters;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 using Libreria.Core.CustomEntities;
+using System.Threading.Tasks;
 
 namespace Libreria.Core.Services
 {
@@ -22,19 +22,54 @@ namespace Libreria.Core.Services
             _dapper = dapper;
         }
 
-        public IEnumerable<Cliente> GetAll()
+        // ==========================================================
+        // GET: Todos los clientes (con solo Id de sus facturas)
+        // ==========================================================
+        public IEnumerable<object> GetAll()
         {
-            var clientes = _unitOfWork.Clientes.GetAll();
+            var clientes = _unitOfWork.Clientes
+                .Query()
+                .Include(c => c.Facturas)
+                .AsNoTracking()
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Nombre,
+                    c.Apellido,
+                    c.Email,
+                    c.FechaRegistro,
+                    c.FechaActualizacion,
+                    Facturas = c.Facturas.Select(f => new { f.Id })
+                })
+                .ToList();
 
-            if (clientes == null || !clientes.Any())
+            if (!clientes.Any())
                 throw new NotFoundException("No se encontraron clientes registrados.");
 
             return clientes;
         }
 
-        public async Task<Cliente?> GetByIdAsync(int id)
+        // ==========================================================
+        // GET: Cliente por Id (con solo Id de sus facturas)
+        // ==========================================================
+        public async Task<object?> GetByIdAsync(int id)
         {
-            var cliente = await _unitOfWork.Clientes.GetById(id);
+            var cliente = await _unitOfWork.Clientes
+                .Query()
+                .Include(c => c.Facturas)
+                .AsNoTracking()
+                .Where(c => c.Id == id)
+                .Select(c => new
+                {
+                    c.Id,
+                    c.Nombre,
+                    c.Apellido,
+                    c.Email,
+                    c.FechaRegistro,
+                    c.FechaActualizacion,
+                    Facturas = c.Facturas.Select(f => new { f.Id })
+                })
+                .FirstOrDefaultAsync();
 
             if (cliente == null)
                 throw new NotFoundException($"No se encontró el cliente con ID {id}.");
@@ -42,21 +77,21 @@ namespace Libreria.Core.Services
             return cliente;
         }
 
+        // ==========================================================
+        // POST: Crear nuevo cliente
+        // ==========================================================
         public async Task AddAsync(Cliente cliente)
         {
             if (string.IsNullOrWhiteSpace(cliente.Nombre))
                 throw new DomainValidationException("El nombre del cliente es obligatorio.");
 
-            if (string.IsNullOrWhiteSpace(cliente.Apellido))
-                throw new DomainValidationException("El apellido del cliente es obligatorio.");
-
-            if (string.IsNullOrWhiteSpace(cliente.Email))
-                throw new DomainValidationException("El correo electrónico del cliente es obligatorio.");
-
             await _unitOfWork.Clientes.Add(cliente);
             await _unitOfWork.SaveChangesAsync();
         }
 
+        // ==========================================================
+        // PUT: Actualizar cliente
+        // ==========================================================
         public void Update(Cliente cliente)
         {
             if (cliente.Id <= 0)
@@ -70,6 +105,9 @@ namespace Libreria.Core.Services
             _unitOfWork.SaveChanges();
         }
 
+        // ==========================================================
+        // DELETE: Eliminar cliente
+        // ==========================================================
         public async Task DeleteAsync(int id)
         {
             var cliente = await _unitOfWork.Clientes.GetById(id);
@@ -80,15 +118,17 @@ namespace Libreria.Core.Services
             await _unitOfWork.SaveChangesAsync();
         }
 
+        // ==========================================================
+        // FILTROS Y RESUMEN (Dapper)
+        // ==========================================================
         public async Task<PagedList<Cliente>> GetFilteredAsync(ClienteQueryFilter filters)
         {
             var sql = @"SELECT 
-                    c.Id, c.Nombre, c.Apellido, c.Email,
-                    COUNT(f.Id) AS FacturasCount,
-                    COALESCE(SUM(f.Total), 0) AS TotalFacturado
-                FROM Clientes c
-                LEFT JOIN Facturas f ON f.ClienteId = c.Id
-                WHERE 1=1 ";
+                            c.Id, c.Nombre, c.Apellido, c.Email,
+                            COUNT(f.Id) AS FacturasRealizadas
+                        FROM Clientes c
+                        LEFT JOIN Facturas f ON c.Id = f.ClienteId
+                        WHERE 1=1 ";
             var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Nombre))
@@ -103,17 +143,9 @@ namespace Libreria.Core.Services
                 parameters.Add("@Apellido", filters.Apellido);
             }
 
-            if (!string.IsNullOrWhiteSpace(filters.EmailContains))
-            {
-                sql += " AND LOWER(c.Email) LIKE CONCAT('%', LOWER(@Email), '%')";
-                parameters.Add("@Email", filters.EmailContains);
-            }
-
-            // Total
             var countSql = $"SELECT COUNT(*) FROM ({sql} GROUP BY c.Id) AS CountQuery";
             var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            // Paginación
             var offset = (filters.PageNumber - 1) * filters.PageSize;
             sql += " GROUP BY c.Id ORDER BY c.Nombre LIMIT @PageSize OFFSET @Offset";
             parameters.Add("@PageSize", filters.PageSize);
@@ -123,20 +155,16 @@ namespace Libreria.Core.Services
             return new PagedList<Cliente>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
-        // ======================
-        // DAPPER: Reporte liviano de clientes
-        // ======================
         public async Task<IEnumerable<dynamic>> GetResumenAsync()
         {
             var sql = @"SELECT 
                             c.Id,
                             CONCAT(c.Nombre, ' ', c.Apellido) AS ClienteNombre,
-                            COUNT(f.Id) AS FacturasRegistradas,
-                            COALESCE(SUM(f.Total), 0) AS MontoTotal
+                            COUNT(f.Id) AS FacturasRealizadas
                         FROM Clientes c
-                        LEFT JOIN Facturas f ON f.ClienteId = c.Id
+                        LEFT JOIN Facturas f ON c.Id = f.ClienteId
                         GROUP BY c.Id, c.Nombre, c.Apellido
-                        ORDER BY ClienteNombre;";
+                        ORDER BY c.Nombre;";
 
             return await _dapper.QueryAsync<dynamic>(sql);
         }
