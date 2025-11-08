@@ -6,11 +6,16 @@ using Libreria.Api.Responses;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
+using System.Net;
 
 namespace Libreria.Api.Controllers
 {
-    [ApiController]
+    /// <summary>
+    /// Controlador para la gestión de facturas.
+    /// </summary>
+    [Produces("application/json")]
     [Route("api/[controller]")]
+    [ApiController]
     public class FacturaController : ControllerBase
     {
         private readonly FacturaService _facturaService;
@@ -22,10 +27,11 @@ namespace Libreria.Api.Controllers
             _mapper = mapper;
         }
 
-        // ========================================
-        // GET: Todas las facturas
-        // ========================================
+        /// <summary>
+        /// Obtiene todas las facturas con detalles y cliente.
+        /// </summary>
         [HttpGet]
+        [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<FacturaDTO>))]
         public IActionResult GetAll()
         {
             var facturas = _facturaService.GetAll();
@@ -33,10 +39,12 @@ namespace Libreria.Api.Controllers
             return Ok(facturasDto);
         }
 
-        // ========================================
-        // GET: Factura por ID
-        // ========================================
+        /// <summary>
+        /// Obtiene una factura por ID.
+        /// </summary>
         [HttpGet("{id}")]
+        [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(FacturaDTO))]
+        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
             var factura = await _facturaService.GetByIdAsync(id);
@@ -47,29 +55,27 @@ namespace Libreria.Api.Controllers
             return Ok(facturaDto);
         }
 
-        // ========================================
-        // POST: Crear una nueva factura
-        // ========================================
+        /// <summary>
+        /// Crea una nueva factura.
+        /// </summary>
         [HttpPost]
+        [ProducesResponseType((int)HttpStatusCode.Created)]
         public async Task<IActionResult> Create([FromBody] FacturaCreateDTO dto)
         {
-            // Mapeamos el DTO a la entidad Factura
             var factura = _mapper.Map<Factura>(dto);
             await _facturaService.AddAsync(factura);
 
-            // Recuperamos la factura ya guardada con includes
             var facturaCompleta = await _facturaService.GetByIdAsync(factura.Id);
-
-            // Mapeamos nuevamente al DTO para devolver solo los datos necesarios
             var facturaDto = _mapper.Map<FacturaDTO>(facturaCompleta);
 
-            return Ok(facturaDto);
+            return StatusCode((int)HttpStatusCode.Created, facturaDto);
         }
 
-        // ========================================
-        // PUT: Actualizar una factura existente
-        // ========================================
+        /// <summary>
+        /// Actualiza una factura existente.
+        /// </summary>
         [HttpPut("{id}")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
         public IActionResult Update(int id, [FromBody] Factura factura)
         {
             if (id != factura.Id)
@@ -79,18 +85,22 @@ namespace Libreria.Api.Controllers
             return Ok("Factura actualizada correctamente.");
         }
 
-        // ========================================
-        // DELETE: Eliminar una factura
-        // ========================================
+        /// <summary>
+        /// Elimina una factura.
+        /// </summary>
         [HttpDelete("{id}")]
+        [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Delete(int id)
         {
             await _facturaService.DeleteAsync(id);
             return Ok("Factura eliminada correctamente.");
-
         }
 
+        /// <summary>
+        /// Filtra facturas por cliente, fecha o monto total.
+        /// </summary>
         [HttpGet("filter")]
+        [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(ApiResponse<IEnumerable<Factura>>))]
         public async Task<IActionResult> GetFiltered([FromQuery] FacturaQueryFilter filters)
         {
             var facturas = await _facturaService.GetFilteredAsync(filters);
