@@ -13,21 +13,40 @@ namespace Libreria.Infrastructure.Repositories
         private IBaseRepository<Cliente>? _clientes;
         private IBaseRepository<Autor>? _autores;
         private IBaseRepository<Factura>? _facturas;
-        private IBaseRepository<DetalleFactura>? _detallesFactura;
+        private IBaseRepository<DetalleFactura>? _detalleFacturas;
+        private IBaseRepository<Security>? _security;
 
         public UnitOfWork(ApplicationDbContext context)
         {
             _context = context;
         }
 
-        public IBaseRepository<Libro> Libros => _libros ??= new BaseRepository<Libro>(_context);
-        public IBaseRepository<Cliente> Clientes => _clientes ??= new BaseRepository<Cliente>(_context);
-        public IBaseRepository<Autor> Autores => _autores ??= new BaseRepository<Autor>(_context);
-        public IBaseRepository<Factura> Facturas => _facturas ??= new BaseRepository<Factura>(_context);
-        public IBaseRepository<DetalleFactura> DetallesFactura => _detallesFactura ??= new BaseRepository<DetalleFactura>(_context);
+        public IBaseRepository<Libro> Libros =>
+            _libros ??= new BaseRepository<Libro>(_context);
 
-        public void SaveChanges() => _context.SaveChanges();
-        public async Task SaveChangesAsync() => await _context.SaveChangesAsync();
-        public void Dispose() => _context.Dispose();
+        public IBaseRepository<Cliente> Clientes =>
+            _clientes ??= new BaseRepository<Cliente>(_context);
+
+        public IBaseRepository<Autor> Autores =>
+            _autores ??= new BaseRepository<Autor>(_context);
+
+        public IBaseRepository<Factura> Facturas =>
+            _facturas ??= new BaseRepository<Factura>(_context);
+
+        public IBaseRepository<DetalleFactura> DetalleFacturas =>
+            _detalleFacturas ??= new BaseRepository<DetalleFactura>(_context);
+
+        public IBaseRepository<Security> Security =>
+            _security ??= new BaseRepository<Security>(_context);
+
+        public async Task<int> SaveChangesAsync()
+        {
+            return await _context.SaveChangesAsync();
+        }
+
+        public void Dispose()
+        {
+            _context.Dispose();
+        }
     }
 }

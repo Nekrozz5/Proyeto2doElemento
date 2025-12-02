@@ -7,6 +7,8 @@ using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Libreria.Api.Controllers
 {
@@ -32,9 +34,9 @@ namespace Libreria.Api.Controllers
         /// </summary>
         [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<FacturaDTO>))]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            var facturas = _facturaService.GetAll();
+            var facturas = await _facturaService.GetAllAsync(); // ✔ usa GetAllAsync
             var facturasDto = _mapper.Map<IEnumerable<FacturaDTO>>(facturas);
             return Ok(facturasDto);
         }
@@ -76,12 +78,13 @@ namespace Libreria.Api.Controllers
         /// </summary>
         [HttpPut("{id}")]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        public IActionResult Update(int id, [FromBody] Factura factura)
+        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
+        public async Task<IActionResult> Update(int id, [FromBody] Factura factura)
         {
             if (id != factura.Id)
                 return BadRequest("El ID de la factura no coincide.");
 
-            _facturaService.Update(factura);
+            await _facturaService.UpdateAsync(factura); // ✔ usa UpdateAsync
             return Ok("Factura actualizada correctamente.");
         }
 

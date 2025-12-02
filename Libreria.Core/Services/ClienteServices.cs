@@ -23,7 +23,7 @@ namespace Libreria.Core.Services
         }
 
         // ==========================================================
-        // GET: Todos los clientes (con solo Id de sus facturas)
+        // GET: Todos los clientes con resumen de facturas
         // ==========================================================
         public IEnumerable<object> GetAll()
         {
@@ -50,7 +50,7 @@ namespace Libreria.Core.Services
         }
 
         // ==========================================================
-        // GET: Cliente por Id (con solo Id de sus facturas)
+        // GET: Cliente por Id con resumen de facturas
         // ==========================================================
         public async Task<object?> GetByIdAsync(int id)
         {
@@ -92,17 +92,17 @@ namespace Libreria.Core.Services
         // ==========================================================
         // PUT: Actualizar cliente
         // ==========================================================
-        public void Update(Cliente cliente)
+        public async Task UpdateAsync(Cliente cliente)
         {
             if (cliente.Id <= 0)
                 throw new DomainValidationException("Debe especificar un ID válido para actualizar.");
 
-            var existing = _unitOfWork.Clientes.GetById(cliente.Id).Result;
+            var existing = await _unitOfWork.Clientes.GetById(cliente.Id);
             if (existing == null)
                 throw new NotFoundException($"No se puede actualizar: el cliente con ID {cliente.Id} no existe.");
 
             _unitOfWork.Clientes.Update(cliente);
-            _unitOfWork.SaveChanges();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         // ==========================================================
@@ -119,7 +119,7 @@ namespace Libreria.Core.Services
         }
 
         // ==========================================================
-        // FILTROS Y RESUMEN (Dapper)
+        // FILTRADO + PAGINACIÓN (Dapper)
         // ==========================================================
         public async Task<PagedList<Cliente>> GetFilteredAsync(ClienteQueryFilter filters)
         {
@@ -129,6 +129,7 @@ namespace Libreria.Core.Services
                         FROM Clientes c
                         LEFT JOIN Facturas f ON c.Id = f.ClienteId
                         WHERE 1=1 ";
+
             var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Nombre))
@@ -152,9 +153,17 @@ namespace Libreria.Core.Services
             parameters.Add("@Offset", offset);
 
             var items = await _dapper.QueryAsync<Cliente>(sql, parameters);
-            return new PagedList<Cliente>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
+            return new PagedList<Cliente>(
+                items.ToList(),
+                totalCount,
+                filters.PageNumber,
+                filters.PageSize
+            );
         }
 
+        // ==========================================================
+        // RESUMEN (Dapper)
+        // ==========================================================
         public async Task<IEnumerable<dynamic>> GetResumenAsync()
         {
             var sql = @"SELECT 

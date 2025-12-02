@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Libreria.Core.CustomEntities;
 
-
 namespace Libreria.Core.Services
 {
     public class DetalleFacturaService
@@ -22,43 +21,76 @@ namespace Libreria.Core.Services
             _dapper = dapper;
         }
 
+        // ==========================================================
+        // GET: Todos los detalles (EF)
+        // ==========================================================
         public IEnumerable<DetalleFactura> GetAll()
         {
-            return _unitOfWork.DetallesFactura.GetAll();
+            return _unitOfWork.DetalleFacturas.GetAll();
         }
 
+        // ==========================================================
+        // GET: DetalleFactura por Id
+        // ==========================================================
         public async Task<DetalleFactura?> GetByIdAsync(int id)
         {
-            return await _unitOfWork.DetallesFactura.GetById(id);
+            return await _unitOfWork.DetalleFacturas.GetById(id);
         }
 
+        // ==========================================================
+        // POST: Crear nuevo detalle
+        // ==========================================================
         public async Task AddAsync(DetalleFactura detalle)
         {
             detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario;
-            await _unitOfWork.DetallesFactura.Add(detalle);
+
+            await _unitOfWork.DetalleFacturas.Add(detalle);
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public void Update(DetalleFactura detalle)
+        // ==========================================================
+        // PUT: Actualizar detalle
+        // ==========================================================
+        public async Task UpdateAsync(DetalleFactura detalle)
         {
-            _unitOfWork.DetallesFactura.Update(detalle);
-            _unitOfWork.SaveChanges();
+            var existing = await _unitOfWork.DetalleFacturas.GetById(detalle.Id);
+
+            if (existing == null)
+                throw new KeyNotFoundException($"No existe el DetalleFactura con ID {detalle.Id}.");
+
+            detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario;
+
+            _unitOfWork.DetalleFacturas.Update(detalle);
+            await _unitOfWork.SaveChangesAsync();
         }
 
+        // ==========================================================
+        // DELETE: Eliminar detalle
+        // ==========================================================
         public async Task DeleteAsync(int id)
         {
-            await _unitOfWork.DetallesFactura.Delete(id);
+            var detalle = await _unitOfWork.DetalleFacturas.GetById(id);
+
+            if (detalle == null)
+                throw new KeyNotFoundException($"No existe el DetalleFactura con ID {id}.");
+
+            await _unitOfWork.DetalleFacturas.Delete(id);
             await _unitOfWork.SaveChangesAsync();
         }
 
+        // ==========================================================
+        // FILTROS + PAGINACIÓN (Dapper)
+        // ==========================================================
         public async Task<PagedList<DetalleFactura>> GetFilteredAsync(DetalleFacturaQueryFilter filters)
         {
             var sql = @"SELECT 
-                    d.Id, d.FacturaId, d.LibroId, d.Cantidad, d.PrecioUnitario, d.Subtotal,
-                    l.Titulo AS LibroTitulo
-                FROM DetallesFactura d
-                INNER JOIN Libros l ON d.LibroId = l.Id
-                WHERE 1=1 ";
+                            d.Id, d.FacturaId, d.LibroId, d.Cantidad, 
+                            d.PrecioUnitario, d.Subtotal,
+                            l.Titulo AS LibroTitulo
+                        FROM DetallesFactura d
+                        INNER JOIN Libros l ON d.LibroId = l.Id
+                        WHERE 1=1 ";
+
             var parameters = new DynamicParameters();
 
             if (filters.FacturaId.HasValue)
@@ -79,22 +111,30 @@ namespace Libreria.Core.Services
                 parameters.Add("@Titulo", filters.LibroTituloContains);
             }
 
-            // Totales
+            // Total de registros
             var countSql = $"SELECT COUNT(*) FROM ({sql}) AS CountQuery";
             var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
+            // Paginación
             var offset = (filters.PageNumber - 1) * filters.PageSize;
             sql += " ORDER BY d.FacturaId LIMIT @PageSize OFFSET @Offset";
+
             parameters.Add("@PageSize", filters.PageSize);
             parameters.Add("@Offset", offset);
 
             var items = await _dapper.QueryAsync<DetalleFactura>(sql, parameters);
-            return new PagedList<DetalleFactura>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
+
+            return new PagedList<DetalleFactura>(
+                items.ToList(),
+                totalCount,
+                filters.PageNumber,
+                filters.PageSize
+            );
         }
 
-        // ======================
-        // DAPPER: Reporte liviano de detalles
-        // ======================
+        // ==========================================================
+        // RESUMEN (Dapper)
+        // ==========================================================
         public async Task<IEnumerable<dynamic>> GetResumenAsync()
         {
             var sql = @"SELECT 

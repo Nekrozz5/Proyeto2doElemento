@@ -27,34 +27,27 @@ namespace Libreria.Core.Services
         }
 
         // =====================================================
-        // MÉTODOS CRUD BASE (sin cambios)
+        // GET ALL (Dapper)
         // =====================================================
-        public IEnumerable<Libro> GetAll()
-        {
-            var task = GetAllAsync();
-            task.Wait();
-            return task.Result;
-        }
-
-        private async Task<IEnumerable<Libro>> GetAllAsync()
+        public async Task<IEnumerable<Libro>> GetAllAsync()
         {
             using var connection = _connFactory.CreateConnection();
 
             var sql = @"
-        SELECT 
-            l.Id, 
-            l.Titulo, 
-            l.AnioPublicacion, 
-            l.Descripcion, 
-            l.Precio, 
-            l.Stock, 
-            l.AutorId,
-            a.Id AS AutorSplit,
-            a.Nombre,
-            a.Apellido
-        FROM Libros l
-        INNER JOIN Autores a ON l.AutorId = a.Id;
-    ";
+                SELECT 
+                    l.Id, 
+                    l.Titulo, 
+                    l.AnioPublicacion, 
+                    l.Descripcion, 
+                    l.Precio, 
+                    l.Stock, 
+                    l.AutorId,
+                    a.Id AS AutorSplit,
+                    a.Nombre,
+                    a.Apellido
+                FROM Libros l
+                INNER JOIN Autores a ON l.AutorId = a.Id;
+            ";
 
             var libros = await connection.QueryAsync<Libro, Autor, Libro>(
                 sql,
@@ -72,30 +65,29 @@ namespace Libreria.Core.Services
             return libros;
         }
 
-
-
-
-
+        // =====================================================
+        // GET BY ID (Dapper)
+        // =====================================================
         public async Task<Libro?> GetByIdAsync(int id)
         {
             using var connection = _connFactory.CreateConnection();
 
             var sql = @"
-        SELECT 
-            l.Id, 
-            l.Titulo, 
-            l.AnioPublicacion, 
-            l.Descripcion, 
-            l.Precio, 
-            l.Stock, 
-            l.AutorId,
-            a.Id AS AutorSplit,
-            a.Nombre,
-            a.Apellido
-        FROM Libros l
-        LEFT JOIN Autores a ON l.AutorId = a.Id
-        WHERE l.Id = @id;
-    ";
+                SELECT 
+                    l.Id, 
+                    l.Titulo, 
+                    l.AnioPublicacion, 
+                    l.Descripcion, 
+                    l.Precio, 
+                    l.Stock, 
+                    l.AutorId,
+                    a.Id AS AutorSplit,
+                    a.Nombre,
+                    a.Apellido
+                FROM Libros l
+                LEFT JOIN Autores a ON l.AutorId = a.Id
+                WHERE l.Id = @id;
+            ";
 
             var result = await connection.QueryAsync<Libro, Autor, Libro>(
                 sql,
@@ -116,58 +108,67 @@ namespace Libreria.Core.Services
             return libro;
         }
 
+        // =====================================================
+        // POST
+        // =====================================================
         public async Task AddAsync(Libro libro)
         {
             if (string.IsNullOrWhiteSpace(libro.Titulo))
-                throw new DomainValidationException("El título del libro es obligatorio.");
+                throw new DomainValidationException("El título es obligatorio.");
 
             if (libro.Precio <= 0)
-                throw new BusinessRuleException("El precio del libro debe ser mayor que cero.");
+                throw new BusinessRuleException("El precio debe ser mayor a cero.");
 
             await _unitOfWork.Libros.Add(libro);
             await _unitOfWork.SaveChangesAsync();
         }
 
-        public void Update(Libro libro)
+        // =====================================================
+        // UPDATE
+        // =====================================================
+        public async Task UpdateAsync(Libro libro)
         {
             if (libro.Id <= 0)
-                throw new DomainValidationException("Debe especificar un ID válido para actualizar.");
+                throw new DomainValidationException("Debe especificar un ID válido.");
 
             if (string.IsNullOrWhiteSpace(libro.Titulo))
-                throw new DomainValidationException("El título del libro es obligatorio.");
+                throw new DomainValidationException("El título es obligatorio.");
 
             if (libro.Precio <= 0)
-                throw new BusinessRuleException("El precio del libro debe ser mayor que cero.");
+                throw new BusinessRuleException("El precio debe ser mayor a cero.");
 
-            var existing = _unitOfWork.Libros.GetById(libro.Id).Result;
+            var existing = await _unitOfWork.Libros.GetById(libro.Id);
             if (existing == null)
-                throw new NotFoundException($"No se puede actualizar: el libro con ID {libro.Id} no existe.");
+                throw new NotFoundException($"No existe un libro con ID {libro.Id}.");
 
             _unitOfWork.Libros.Update(libro);
-            _unitOfWork.SaveChanges();
+            await _unitOfWork.SaveChangesAsync();
         }
 
+        // =====================================================
+        // DELETE
+        // =====================================================
         public async Task DeleteAsync(int id)
         {
             var libro = await _unitOfWork.Libros.GetById(id);
 
             if (libro == null)
-                throw new NotFoundException($"No se puede eliminar: el libro con ID {id} no existe.");
+                throw new NotFoundException($"No existe un libro con ID {id}.");
 
             await _unitOfWork.Libros.Delete(id);
             await _unitOfWork.SaveChangesAsync();
         }
 
         // =====================================================
-        // FILTROS CON PAGINACIÓN + ESTANDARIZACIÓN DE RESPUESTA
+        // GET FILTERED + PAGINATION
         // =====================================================
         public async Task<ResponseData> GetFilteredAsync(LibroQueryFilter filters)
         {
             var sql = @"SELECT l.Id, l.Titulo, l.Precio, l.Stock, 
-                               l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
-                        FROM Libros l
-                        LEFT JOIN Autores a ON l.AutorId = a.Id
-                        WHERE 1=1 ";
+                       l.AutorId, a.Nombre AS AutorNombre, a.Apellido AS AutorApellido
+                FROM Libros l
+                LEFT JOIN Autores a ON l.AutorId = a.Id
+                WHERE 1=1 ";
             var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Titulo))
@@ -179,10 +180,10 @@ namespace Libreria.Core.Services
             if (!string.IsNullOrWhiteSpace(filters.Autor))
             {
                 sql += @" AND (
-                            LOWER(a.Nombre) LIKE CONCAT('%', LOWER(@Autor), '%')
-                            OR LOWER(a.Apellido) LIKE CONCAT('%', LOWER(@Autor), '%')
-                            OR LOWER(CONCAT(a.Nombre, ' ', a.Apellido)) LIKE CONCAT('%', LOWER(@Autor), '%')
-                          )";
+                    LOWER(a.Nombre) LIKE CONCAT('%', LOWER(@Autor), '%')
+                    OR LOWER(a.Apellido) LIKE CONCAT('%', LOWER(@Autor), '%')
+                    OR LOWER(CONCAT(a.Nombre, ' ', a.Apellido)) LIKE CONCAT('%', LOWER(@Autor), '%')
+                  )";
                 parameters.Add("@Autor", filters.Autor.Trim());
             }
 
@@ -201,49 +202,45 @@ namespace Libreria.Core.Services
             if (filters.Disponibles == true)
                 sql += " AND l.Stock > 0";
 
-            // === Conteo total ===
-            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS TotalCountQuery";
+            // Total
+            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS CountQuery";
             var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            // === Paginación ===
+            // Pagination
             var offset = (filters.PageNumber - 1) * filters.PageSize;
             sql += " ORDER BY l.Id LIMIT @PageSize OFFSET @Offset";
+
             parameters.Add("@PageSize", filters.PageSize);
             parameters.Add("@Offset", offset);
 
             var items = await _dapper.QueryAsync<Libro>(sql, parameters);
-            var pagedList = new PagedList<object>(items.Cast<object>().ToList(), totalCount, filters.PageNumber, filters.PageSize);
 
-            if (items.Any())
-            {
-                return new ResponseData
-                {
-                    Pagination = pagedList,
-                    Messages = new[]
-                    {
-                        new Message
-                        {
-                            Type = TypeMessage.information.ToString(),
-                            Description = "Libros recuperados correctamente."
-                        }
-                    },
-                    StatusCode = HttpStatusCode.OK
-                };
-            }
+            // CONVERTIR A PagedList<object>
+            var pagedList = new PagedList<object>(
+                items.Cast<object>().ToList(),
+                totalCount,
+                filters.PageNumber,
+                filters.PageSize
+            );
 
             return new ResponseData
             {
                 Pagination = pagedList,
                 Messages = new[]
                 {
-                    new Message
-                    {
-                        Type = TypeMessage.warning.ToString(),
-                        Description = "No se encontraron libros con los filtros aplicados."
-                    }
-                },
+            new Message
+            {
+                Type = items.Any()
+                    ? TypeMessage.information.ToString()
+                    : TypeMessage.warning.ToString(),
+                Description = items.Any()
+                    ? "Libros recuperados correctamente."
+                    : "No se encontraron resultados."
+            }
+        },
                 StatusCode = HttpStatusCode.OK
             };
         }
+
     }
 }

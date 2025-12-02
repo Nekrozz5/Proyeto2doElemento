@@ -64,15 +64,16 @@ namespace Libreria.Api.Controllers
         /// Actualiza un detalle existente.
         /// </summary>
         [HttpPut("{id}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        public IActionResult Update(int id, DetalleFactura detalle)
+        public async Task<IActionResult> Put(int id, DetalleFactura detalle)
         {
             if (id != detalle.Id)
-                return BadRequest("El ID del detalle no coincide.");
+                return BadRequest("El ID no coincide.");
 
-            _detalleService.Update(detalle);
-            return Ok("Detalle actualizado correctamente.");
+            await _detalleService.UpdateAsync(detalle); // ← ahora sí existe
+            return NoContent();
         }
+
+
 
         /// <summary>
         /// Elimina un detalle por ID.

@@ -69,29 +69,29 @@
                 return StatusCode((int)HttpStatusCode.Created, "Autor agregado correctamente.");
             }
 
-            /// <summary>
-            /// Actualiza un autor existente.
-            /// </summary>
-            /// <param name="id">Identificador del autor.</param>
-            /// <param name="autor">Datos actualizados.</param>
-            /// <response code="200">Autor actualizado correctamente.</response>
-            [HttpPut("{id}")]
-            [ProducesResponseType((int)HttpStatusCode.OK)]
-            public IActionResult Update(int id, Autor autor)
-            {
-                if (id != autor.Id)
-                    return BadRequest("El ID del autor no coincide.");
+        /// <summary>
+        /// Actualiza un autor existente.
+        /// </summary>
+        /// <param name="id">Identificador del autor.</param>
+        /// <param name="autor">Datos actualizados.</param>
+        /// <response code="200">Autor actualizado correctamente.</response>
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Put(int id, Autor autor)
+        {
+            if (id != autor.Id)
+                return BadRequest("El ID no coincide.");
 
-                _autorService.Update(autor);
-                return Ok("Autor actualizado correctamente.");
-            }
+            await _autorService.UpdateAsync(autor); // <-- CORREGIDO
+            return NoContent();
+        }
 
-            /// <summary>
-            /// Elimina un autor por su identificador.
-            /// </summary>
-            /// <param name="id">Identificador del autor.</param>
-            /// <response code="200">Autor eliminado correctamente.</response>
-            [HttpDelete("{id}")]
+
+        /// <summary>
+        /// Elimina un autor por su identificador.
+        /// </summary>
+        /// <param name="id">Identificador del autor.</param>
+        /// <response code="200">Autor eliminado correctamente.</response>
+        [HttpDelete("{id}")]
             [ProducesResponseType((int)HttpStatusCode.OK)]
             public async Task<IActionResult> Delete(int id)
             {

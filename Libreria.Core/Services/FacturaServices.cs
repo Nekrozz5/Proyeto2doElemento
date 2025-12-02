@@ -9,13 +9,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using Libreria.Core.CustomEntities;
 
-
 namespace Libreria.Core.Services
 {
     public class FacturaService
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IDapperContext _dapper; // ✅ se agrega para lecturas rápidas
+        private readonly IDapperContext _dapper;
 
         public FacturaService(IUnitOfWork unitOfWork, IDapperContext dapper)
         {
@@ -24,32 +23,30 @@ namespace Libreria.Core.Services
         }
 
         // ======================================================
-        // GET COMPLETO (EF Core): Facturas con Cliente y Detalles
+        // GET COMPLETO (EF Core)
         // ======================================================
-        public IEnumerable<Factura> GetAll()
+        public async Task<IEnumerable<Factura>> GetAllAsync()
         {
-            var facturas = _unitOfWork.Facturas
-                .GetAll()
-                .AsQueryable()
+            var facturas = await _unitOfWork.Facturas
+                .Query()
                 .Include(f => f.Cliente)
                 .Include(f => f.DetalleFacturas)
                     .ThenInclude(df => df.Libro)
-                .ToList();
+                .ToListAsync();
 
-            if (facturas == null || !facturas.Any())
+            if (!facturas.Any())
                 throw new NotFoundException("No se encontraron facturas registradas.");
 
             return facturas;
         }
 
         // ======================================================
-        // GET BY ID (EF Core)
+        // GET BY ID (EF)
         // ======================================================
         public async Task<Factura?> GetByIdAsync(int id)
         {
             var factura = await _unitOfWork.Facturas
-                .GetAll()
-                .AsQueryable()
+                .Query()
                 .Include(f => f.Cliente)
                 .Include(f => f.DetalleFacturas)
                     .ThenInclude(df => df.Libro)
@@ -62,40 +59,43 @@ namespace Libreria.Core.Services
         }
 
         // ======================================================
-        // POST (EF Core): Crear nueva factura
+        // POST: Crear factura
         // ======================================================
         public async Task AddAsync(Factura factura)
         {
             if (factura.ClienteId <= 0)
-                throw new DomainValidationException("Debe especificar un cliente válido para la factura.");
+                throw new DomainValidationException("Debe especificar un cliente válido.");
 
             if (factura.DetalleFacturas == null || !factura.DetalleFacturas.Any())
                 throw new DomainValidationException("La factura debe tener al menos un detalle.");
 
-            // Buscar cliente
+            // Validar cliente
             var cliente = await _unitOfWork.Clientes.GetById(factura.ClienteId);
             if (cliente == null)
-                throw new NotFoundException("Cliente no encontrado.");
+                throw new NotFoundException("El cliente no existe.");
 
             decimal total = 0;
 
+            // Validar stock y calcular total
             foreach (var detalle in factura.DetalleFacturas)
             {
                 var libro = await _unitOfWork.Libros.GetById(detalle.LibroId);
+
                 if (libro == null)
                     throw new NotFoundException($"Libro con ID {detalle.LibroId} no encontrado.");
 
                 if (detalle.Cantidad <= 0)
-                    throw new DomainValidationException("La cantidad del detalle debe ser mayor a cero.");
+                    throw new DomainValidationException("La cantidad debe ser mayor a cero.");
 
                 if (libro.Stock < detalle.Cantidad)
-                    throw new BusinessRuleException($"El libro '{libro.Titulo}' no tiene stock suficiente. Disponible: {libro.Stock}.");
+                    throw new BusinessRuleException(
+                        $"Stock insuficiente del libro '{libro.Titulo}'. Disponible: {libro.Stock}");
 
                 detalle.PrecioUnitario = libro.Precio;
                 detalle.Subtotal = detalle.Cantidad * detalle.PrecioUnitario;
+
                 total += detalle.Subtotal;
 
-                // Actualizar stock
                 libro.Stock -= detalle.Cantidad;
                 _unitOfWork.Libros.Update(libro);
             }
@@ -103,50 +103,53 @@ namespace Libreria.Core.Services
             factura.Fecha = DateTime.Now;
             factura.Total = total;
 
-            if (factura.Total <= 0)
-                throw new BusinessRuleException("El total de la factura debe ser mayor que cero.");
-
             await _unitOfWork.Facturas.Add(factura);
             await _unitOfWork.SaveChangesAsync();
         }
 
         // ======================================================
-        // PUT (EF Core)
+        // PUT: Actualizar factura
         // ======================================================
-        public void Update(Factura factura)
+        public async Task UpdateAsync(Factura factura)
         {
             if (factura.Id <= 0)
-                throw new DomainValidationException("Debe especificar un ID válido para actualizar la factura.");
+                throw new DomainValidationException("Debe especificar un ID válido.");
+
+            var existing = await _unitOfWork.Facturas.GetById(factura.Id);
+            if (existing == null)
+                throw new NotFoundException($"Factura con ID {factura.Id} no existe.");
 
             _unitOfWork.Facturas.Update(factura);
-            _unitOfWork.SaveChanges();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         // ======================================================
-        // DELETE (EF Core)
+        // DELETE: Eliminar factura
         // ======================================================
         public async Task DeleteAsync(int id)
         {
             var factura = await _unitOfWork.Facturas.GetById(id);
+
             if (factura == null)
-                throw new NotFoundException($"No se puede eliminar: la factura con ID {id} no existe.");
+                throw new NotFoundException($"No se puede eliminar: factura ID {id} no existe.");
 
             await _unitOfWork.Facturas.Delete(id);
             await _unitOfWork.SaveChangesAsync();
         }
 
         // ======================================================
-        // GET FILTRADO (EF Core)
+        // GET FILTRADO (Dapper)
         // ======================================================
         public async Task<PagedList<Factura>> GetFilteredAsync(FacturaQueryFilter filters)
         {
             var sql = @"SELECT 
-                    f.Id, f.Fecha, f.Total,
-                    f.ClienteId,
-                    CONCAT(c.Nombre, ' ', c.Apellido) AS ClienteNombre
-                FROM Facturas f
-                INNER JOIN Clientes c ON f.ClienteId = c.Id
-                WHERE 1=1 ";
+                            f.Id, f.Fecha, f.Total,
+                            f.ClienteId,
+                            CONCAT(c.Nombre, ' ', c.Apellido) AS ClienteNombre
+                        FROM Facturas f
+                        INNER JOIN Clientes c ON f.ClienteId = c.Id
+                        WHERE 1=1 ";
+
             var parameters = new DynamicParameters();
 
             if (filters.ClienteId.HasValue)
@@ -185,22 +188,29 @@ namespace Libreria.Core.Services
                 parameters.Add("@MaxTotal", filters.MaxTotal.Value);
             }
 
-            // ===== Total =====
-            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS TotalCountQuery";
+            // Total de registros
+            var countSql = $"SELECT COUNT(*) FROM ({sql}) AS CountQuery";
             var totalCount = await _dapper.ExecuteScalarAsync<int>(countSql, parameters);
 
-            // ===== Paginación =====
+            // Paginación
             var offset = (filters.PageNumber - 1) * filters.PageSize;
             sql += " ORDER BY f.Fecha DESC LIMIT @PageSize OFFSET @Offset";
+
             parameters.Add("@PageSize", filters.PageSize);
             parameters.Add("@Offset", offset);
 
             var items = await _dapper.QueryAsync<Factura>(sql, parameters);
-            return new PagedList<Factura>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
+
+            return new PagedList<Factura>(
+                items.ToList(),
+                totalCount,
+                filters.PageNumber,
+                filters.PageSize
+            );
         }
 
         // ======================================================
-        // NUEVO MÉTODO (DAPPER): Resumen de facturas liviano
+        // RESUMEN (Dapper)
         // ======================================================
         public async Task<IEnumerable<dynamic>> GetResumenAsync()
         {
@@ -213,10 +223,7 @@ namespace Libreria.Core.Services
                         INNER JOIN Clientes c ON f.ClienteId = c.Id
                         ORDER BY f.Fecha DESC";
 
-            var resumen = await _dapper.QueryAsync<dynamic>(sql);
-            return resumen;
+            return await _dapper.QueryAsync<dynamic>(sql);
         }
-
-
     }
 }

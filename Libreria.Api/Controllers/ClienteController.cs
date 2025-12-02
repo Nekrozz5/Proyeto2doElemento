@@ -64,15 +64,15 @@ namespace Libreria.Api.Controllers
         /// Actualiza la información de un cliente.
         /// </summary>
         [HttpPut("{id}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        public IActionResult Update(int id, Cliente cliente)
+        public async Task<IActionResult> Put(int id, Cliente cliente)
         {
             if (id != cliente.Id)
-                return BadRequest("El ID del cliente no coincide.");
+                return BadRequest("El ID no coincide.");
 
-            _clienteService.Update(cliente);
-            return Ok("Cliente actualizado correctamente.");
+            await _clienteService.UpdateAsync(cliente);  // <-- CORREGIDO
+            return NoContent();
         }
+
 
         /// <summary>
         /// Elimina un cliente por su ID.

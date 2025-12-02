@@ -10,10 +10,9 @@ namespace Libreria.Core.Interfaces
         IBaseRepository<Cliente> Clientes { get; }
         IBaseRepository<Autor> Autores { get; }
         IBaseRepository<Factura> Facturas { get; }
-        IBaseRepository<DetalleFactura> DetallesFactura { get; }
+        IBaseRepository<DetalleFactura> DetalleFacturas { get; }
+        IBaseRepository<Security> Security { get; }
 
-
-        void SaveChanges();
-        Task SaveChangesAsync();
+        Task<int> SaveChangesAsync();
     }
 }

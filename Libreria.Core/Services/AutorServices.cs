@@ -53,7 +53,7 @@ namespace Libreria.Core.Services
         }
 
         // ==========================================================
-        // GET: Autor por Id (con solo Id y Titulo de sus libros)
+        // GET: Autor por Id
         // ==========================================================
         public async Task<object?> GetByIdAsync(int id)
         {
@@ -98,17 +98,18 @@ namespace Libreria.Core.Services
         // ==========================================================
         // PUT: Actualizar autor
         // ==========================================================
-        public void Update(Autor autor)
+        public async Task UpdateAsync(Autor autor)
         {
             if (autor.Id <= 0)
                 throw new DomainValidationException("Debe especificar un ID válido para actualizar.");
 
-            var existing = _unitOfWork.Autores.GetById(autor.Id).Result;
+            var existing = await _unitOfWork.Autores.GetById(autor.Id);
             if (existing == null)
-                throw new NotFoundException($"No se puede actualizar: el autor con ID {autor.Id} no existe.");
+                throw new NotFoundException(
+                    $"No se puede actualizar: el autor con ID {autor.Id} no existe.");
 
             _unitOfWork.Autores.Update(autor);
-            _unitOfWork.SaveChanges();
+            await _unitOfWork.SaveChangesAsync();
         }
 
         // ==========================================================
@@ -118,7 +119,8 @@ namespace Libreria.Core.Services
         {
             var autor = await _unitOfWork.Autores.GetById(id);
             if (autor == null)
-                throw new NotFoundException($"No se puede eliminar: el autor con ID {id} no existe.");
+                throw new NotFoundException(
+                    $"No se puede eliminar: el autor con ID {id} no existe.");
 
             await _unitOfWork.Autores.Delete(id);
             await _unitOfWork.SaveChangesAsync();
@@ -135,6 +137,7 @@ namespace Libreria.Core.Services
                 FROM Autores a
                 LEFT JOIN Libros l ON a.Id = l.AutorId
                 WHERE 1=1 ";
+
             var parameters = new DynamicParameters();
 
             if (!string.IsNullOrWhiteSpace(filters.Nombre))
@@ -158,7 +161,8 @@ namespace Libreria.Core.Services
             parameters.Add("@Offset", offset);
 
             var items = await _dapper.QueryAsync<Autor>(sql, parameters);
-            return new PagedList<Autor>(items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
+            return new PagedList<Autor>(
+                items.ToList(), totalCount, filters.PageNumber, filters.PageSize);
         }
 
         public async Task<IEnumerable<dynamic>> GetResumenAsync()
