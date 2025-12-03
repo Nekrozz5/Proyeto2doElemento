@@ -8,6 +8,7 @@ using Libreria.Core.QueryFilters;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Libro;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
@@ -29,9 +30,10 @@ namespace Libreria.Api.Controllers
         }
 
         // ======================================================
-        // GET ALL (ASYNC)
+        // GET ALL
         // ======================================================
         [HttpGet]
+        [Authorize]  // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<LibroDto>))]
         public async Task<IActionResult> GetAll()
         {
@@ -44,6 +46,7 @@ namespace Libreria.Api.Controllers
         // GET BY ID
         // ======================================================
         [HttpGet("{id}")]
+        [Authorize]  // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(LibroDto))]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> GetById(int id)
@@ -57,10 +60,11 @@ namespace Libreria.Api.Controllers
         }
 
         // ======================================================
-        // POST
+        // CREATE
         // ======================================================
         [HttpPost]
-        [ProducesResponseType((int)HttpStatusCode.Created, Type = typeof(LibroDto))]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
+        [ProducesResponseType((int)HttpStatusCode.Created)]
         public async Task<IActionResult> Create([FromBody] LibroCreateDto dto)
         {
             if (dto == null)
@@ -76,10 +80,10 @@ namespace Libreria.Api.Controllers
         }
 
         // ======================================================
-        // PUT (ASYNC)
+        // UPDATE
         // ======================================================
         [HttpPut("{id}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         public async Task<IActionResult> Update(int id, [FromBody] LibroUpdateDto dto)
         {
             if (id != dto.Id)
@@ -95,8 +99,7 @@ namespace Libreria.Api.Controllers
         // DELETE
         // ======================================================
         [HttpDelete("{id}")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         public async Task<IActionResult> Delete(int id)
         {
             await _libroService.DeleteAsync(id);
@@ -104,18 +107,18 @@ namespace Libreria.Api.Controllers
         }
 
         // ======================================================
-        // FILTER (CORREGIDO: sin .Items)
+        // FILTER + PAGINACIÓN
         // ======================================================
         [HttpGet("filter")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Authorize] // USER o ADMIN
         public async Task<IActionResult> GetFiltered([FromQuery] LibroQueryFilter filters)
         {
             try
             {
                 var result = await _libroService.GetFilteredAsync(filters);
 
-                // result.Pagination es un PagedList<object> donde cada item es un Libro
-                var libros = result.Pagination.Cast<Libro>(); // <- AQUÍ EL CAMBIO CLAVE
+                // Items dentro de PagedList<object>
+                var libros = result.Pagination.Cast<Libro>();
                 var librosDto = _mapper.Map<IEnumerable<LibroDto>>(libros);
 
                 var pagination = new Pagination
@@ -138,7 +141,7 @@ namespace Libreria.Api.Controllers
             }
             catch (Exception ex)
             {
-                var errorResponse = new ResponseData
+                var error = new ResponseData
                 {
                     Messages = new[]
                     {
@@ -151,7 +154,7 @@ namespace Libreria.Api.Controllers
                     StatusCode = HttpStatusCode.InternalServerError
                 };
 
-                return StatusCode(500, errorResponse);
+                return StatusCode(500, error);
             }
         }
     }

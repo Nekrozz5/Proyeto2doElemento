@@ -45,7 +45,7 @@ namespace Libreria.Api.Controllers
         }
 
         // ======================================================
-        // EJEMPLO DE ENDPOINT PROTEGIDO
+        // ENDPOINT CON TOKEN
         // ======================================================
         [Authorize]
         [HttpGet("me")]
@@ -53,9 +53,9 @@ namespace Libreria.Api.Controllers
         {
             return Ok(new
             {
-                User = User.Identity?.Name,
-                Role = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value,
-                Login = User.Claims.FirstOrDefault(c => c.Type == "sub")?.Value
+                Login = User.Claims.FirstOrDefault(c => c.Type == "login")?.Value,
+                Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value,
+                Role = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value
             });
         }
 

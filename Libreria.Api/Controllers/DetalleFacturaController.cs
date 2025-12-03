@@ -4,13 +4,11 @@ using Libreria.Core.QueryFilters;
 using Libreria.Api.Responses;
 using Libreria.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Net;
 
 namespace Libreria.Api.Controllers
 {
-    /// <summary>
-    /// Controlador para la gestión de detalles de facturas.
-    /// </summary>
     [Produces("application/json")]
     [Route("api/[controller]")]
     [ApiController]
@@ -24,9 +22,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene todos los detalles registrados.
+        /// Obtiene todos los detalles.
         /// </summary>
         [HttpGet]
+        [Authorize] // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<DetalleFactura>))]
         public IActionResult GetAll()
         {
@@ -35,11 +34,11 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene un detalle por su ID.
+        /// Obtiene un detalle por ID.
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize] // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(DetalleFactura))]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
             var detalle = await _detalleService.GetByIdAsync(id);
@@ -53,6 +52,7 @@ namespace Libreria.Api.Controllers
         /// Crea un nuevo detalle de factura.
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.Created)]
         public async Task<IActionResult> Create(DetalleFactura detalle)
         {
@@ -61,24 +61,24 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Actualiza un detalle existente.
+        /// Actualiza un detalle.
         /// </summary>
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         public async Task<IActionResult> Put(int id, DetalleFactura detalle)
         {
             if (id != detalle.Id)
                 return BadRequest("El ID no coincide.");
 
-            await _detalleService.UpdateAsync(detalle); // ← ahora sí existe
+            await _detalleService.UpdateAsync(detalle);
             return NoContent();
         }
 
-
-
         /// <summary>
-        /// Elimina un detalle por ID.
+        /// Elimina un detalle.
         /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Delete(int id)
         {
@@ -87,9 +87,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Filtra detalles de facturas según criterios de búsqueda.
+        /// Filtra detalles con paginación.
         /// </summary>
         [HttpGet("filter")]
+        [Authorize] // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(ApiResponse<IEnumerable<DetalleFactura>>))]
         public async Task<IActionResult> GetFiltered([FromQuery] DetalleFacturaQueryFilter filters)
         {
@@ -114,10 +115,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene un resumen de todos los detalles con información de libro.
+        /// Obtiene un resumen con información del libro.
         /// </summary>
         [HttpGet("resumen")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Authorize] // USER o ADMIN
         public async Task<IActionResult> GetResumen()
         {
             var resumen = await _detalleService.GetResumenAsync();

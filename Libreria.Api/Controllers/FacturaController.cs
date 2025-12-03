@@ -6,15 +6,13 @@ using Libreria.Api.Responses;
 using Libreria.Core.Services;
 using Libreria.Infrastructure.DTOs.Factura;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Net;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Libreria.Api.Controllers
 {
-    /// <summary>
-    /// Controlador para la gestión de facturas.
-    /// </summary>
     [Produces("application/json")]
     [Route("api/[controller]")]
     [ApiController]
@@ -30,23 +28,25 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene todas las facturas con detalles y cliente.
+        /// Obtiene todas las facturas completas.
         /// </summary>
         [HttpGet]
+        [Authorize] // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<FacturaDTO>))]
         public async Task<IActionResult> GetAll()
         {
-            var facturas = await _facturaService.GetAllAsync(); // ✔ usa GetAllAsync
+            var facturas = await _facturaService.GetAllAsync();
             var facturasDto = _mapper.Map<IEnumerable<FacturaDTO>>(facturas);
+
             return Ok(facturasDto);
         }
 
         /// <summary>
-        /// Obtiene una factura por ID.
+        /// Obtiene una factura por su ID.
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize] // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(FacturaDTO))]
-        [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> GetById(int id)
         {
             var factura = await _facturaService.GetByIdAsync(id);
@@ -61,6 +61,7 @@ namespace Libreria.Api.Controllers
         /// Crea una nueva factura.
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.Created)]
         public async Task<IActionResult> Create([FromBody] FacturaCreateDTO dto)
         {
@@ -74,17 +75,17 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Actualiza una factura existente.
+        /// Actualiza los datos de una factura.
         /// </summary>
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        [ProducesResponseType((int)HttpStatusCode.BadRequest)]
         public async Task<IActionResult> Update(int id, [FromBody] Factura factura)
         {
             if (id != factura.Id)
                 return BadRequest("El ID de la factura no coincide.");
 
-            await _facturaService.UpdateAsync(factura); // ✔ usa UpdateAsync
+            await _facturaService.UpdateAsync(factura);
             return Ok("Factura actualizada correctamente.");
         }
 
@@ -92,6 +93,7 @@ namespace Libreria.Api.Controllers
         /// Elimina una factura.
         /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")] // SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Delete(int id)
         {
@@ -100,9 +102,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Filtra facturas por cliente, fecha o monto total.
+        /// Filtra facturas por cliente, fecha o total.
         /// </summary>
         [HttpGet("filter")]
+        [Authorize] // USER o ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(ApiResponse<IEnumerable<Factura>>))]
         public async Task<IActionResult> GetFiltered([FromQuery] FacturaQueryFilter filters)
         {

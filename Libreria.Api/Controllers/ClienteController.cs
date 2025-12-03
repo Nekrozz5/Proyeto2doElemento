@@ -4,13 +4,11 @@ using Libreria.Core.QueryFilters;
 using Libreria.Api.Responses;
 using Libreria.Core.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Net;
 
 namespace Libreria.Api.Controllers
 {
-    /// <summary>
-    /// Controlador para la gestión de clientes.
-    /// </summary>
     [Produces("application/json")]
     [Route("api/[controller]")]
     [ApiController]
@@ -27,6 +25,7 @@ namespace Libreria.Api.Controllers
         /// Obtiene todos los clientes.
         /// </summary>
         [HttpGet]
+        [Authorize]   // <--- User o Admin
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(IEnumerable<Cliente>))]
         public IActionResult GetAll()
         {
@@ -35,9 +34,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene un cliente por su identificador.
+        /// Obtiene un cliente por su ID.
         /// </summary>
         [HttpGet("{id}")]
+        [Authorize]   // <--- User o Admin
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(Cliente))]
         [ProducesResponseType((int)HttpStatusCode.NotFound)]
         public async Task<IActionResult> GetById(int id)
@@ -50,9 +50,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Crea un nuevo cliente.
+        /// Crea un cliente.
         /// </summary>
         [HttpPost]
+        [Authorize(Roles = "Admin")]  // <--- SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.Created)]
         public async Task<IActionResult> Create(Cliente cliente)
         {
@@ -61,23 +62,24 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Actualiza la información de un cliente.
+        /// Actualiza un cliente.
         /// </summary>
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]  // <--- SOLO ADMIN
         public async Task<IActionResult> Put(int id, Cliente cliente)
         {
             if (id != cliente.Id)
                 return BadRequest("El ID no coincide.");
 
-            await _clienteService.UpdateAsync(cliente);  // <-- CORREGIDO
+            await _clienteService.UpdateAsync(cliente);
             return NoContent();
         }
 
-
         /// <summary>
-        /// Elimina un cliente por su ID.
+        /// Elimina un cliente.
         /// </summary>
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]  // <--- SOLO ADMIN
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public async Task<IActionResult> Delete(int id)
         {
@@ -86,9 +88,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Filtra clientes con opciones de paginación.
+        /// Filtra clientes con paginación.
         /// </summary>
         [HttpGet("filter")]
+        [Authorize]   // <--- User o Admin
         [ProducesResponseType((int)HttpStatusCode.OK, Type = typeof(ApiResponse<IEnumerable<Cliente>>))]
         public async Task<IActionResult> GetFiltered([FromQuery] ClienteQueryFilter filters)
         {
@@ -113,10 +116,10 @@ namespace Libreria.Api.Controllers
         }
 
         /// <summary>
-        /// Obtiene un resumen de clientes y sus facturas.
+        /// Obtiene un resumen de clientes y facturas.
         /// </summary>
         [HttpGet("resumen")]
-        [ProducesResponseType((int)HttpStatusCode.OK)]
+        [Authorize]  // <--- User o Admin
         public async Task<IActionResult> GetResumen()
         {
             var resumen = await _clienteService.GetResumenAsync();
