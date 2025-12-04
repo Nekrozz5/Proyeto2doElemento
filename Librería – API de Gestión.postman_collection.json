@@ -97,6 +97,31 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "Versionamiento",
+					"protocolProfileBehavior": {
+						"disableBodyPruning": true
+					},
+					"request": {
+						"method": "GET",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"nombre\": \"Ariel\",\r\n  \"apellido\": \"Morales\",\r\n  \"email\": \"ariel.morales.ayma@example.com\",\r\n  \"password\": \"123456\"\r\n}\r\n"
+						},
+						"url": {
+							"raw": "{{base_url}}/v2/libros",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v2",
+								"libros"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		},
@@ -307,7 +332,7 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/libro/filter?autor=",
+							"raw": "{{base_url}}/libro/filter?autor=Tol",
 							"host": [
 								"{{base_url}}"
 							],
@@ -318,7 +343,7 @@
 							"query": [
 								{
 									"key": "autor",
-									"value": ""
+									"value": "Tol"
 								}
 							]
 						}
@@ -345,6 +370,101 @@
 			"item": [
 				{
 					"name": "paginacion",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/factura/filter?pageNumber=1&pageSize=5",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"factura",
+								"filter"
+							],
+							"query": [
+								{
+									"key": "pageNumber",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Tokens",
+			"item": [
+				{
+					"name": "CrearToken",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"user\": \"admin\",\r\n  \"password\": \"1234\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/v1/Token/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"Token",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "obtener  token",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJVc2VyIjoiYWRtaW4iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJhZG1pbkB1Y2IuZWR1LmJvIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiQWRtaW5pc3RyYWRvciIsImV4cCI6MTc2NDU0NDk4MSwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NzEyNS8iLCJhdWQiOiJodHRwczovL2xvY2FsaG9zdDo3MTI1LyJ9.T4RUKgIiO96IDTdqa56QVcDGihkpRPaBCDm7xF3Yj_g",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/v1/libros/protegido",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"v1",
+								"libros",
+								"protegido"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "New Folder",
+			"item": [
+				{
+					"name": "New Request",
 					"request": {
 						"method": "GET",
 						"header": []
