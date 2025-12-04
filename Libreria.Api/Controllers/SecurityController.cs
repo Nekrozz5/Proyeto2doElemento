@@ -4,6 +4,7 @@ using Libreria.Infrastructure.DTOs.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Net;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Libreria.Api.Controllers
 {
@@ -53,11 +54,13 @@ namespace Libreria.Api.Controllers
         {
             return Ok(new
             {
-                Login = User.Claims.FirstOrDefault(c => c.Type == "login")?.Value,
-                Name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value,
-                Role = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value
+                login = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub)?.Value,
+                name = User.Claims.FirstOrDefault(c => c.Type == "name")?.Value,
+                role = User.Claims.FirstOrDefault(c => c.Type == "role")?.Value
             });
         }
+
+
 
         // ======================================================
         // ENDPOINT SOLO ADMIN

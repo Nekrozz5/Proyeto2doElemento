@@ -10,7 +10,6 @@ using Libreria.Infrastructure.Repositories;
 using Libreria.Infrastructure.Validators;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -18,40 +17,44 @@ using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.Text;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
-// =============================================
-// 🔹 USER SECRETS (SOLO DESARROLLO)
-// =============================================
+// ==================================================
+// 🔥 CONFIGURACIÓN BASE (OBLIGATORIA PARA AZURE)
+// ==================================================
+builder.Configuration.Sources.Clear();
+
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddEnvironmentVariables(); // Azure lee todo desde aquí
+
+// ==================================================
+// 🔥 USER SECRETS SOLO EN DESARROLLO
+// ==================================================
 if (builder.Environment.IsDevelopment())
 {
     builder.Configuration.AddUserSecrets<Program>();
-    Console.WriteLine("✔ User Secrets cargados correctamente.");
+    Console.WriteLine("✔ User Secrets habilitados");
 }
 
 // ==================================================
-// 🔹 BASE DE DATOS (MYSQL AZURE)
+// 🔥 BASE DE DATOS MYSQL AZURE
 // ==================================================
-var providerDb = builder.Configuration.GetValue<string>("DatabaseProvider") ?? "MySql";
+var connectionString = builder.Configuration.GetConnectionString("ConnectionMySql");
 
-if (providerDb.Equals("MySql", StringComparison.OrdinalIgnoreCase))
+if (string.IsNullOrWhiteSpace(connectionString))
 {
-    var conn = builder.Configuration.GetConnectionString("ConnectionMySql");
-
-    if (string.IsNullOrWhiteSpace(conn))
-        throw new InvalidOperationException("❌ No se encontró ConnectionMySql. Verifica UserSecrets.");
-
-    builder.Services.AddDbContext<ApplicationDbContext>(options =>
-        options.UseMySql(conn, new MySqlServerVersion(new Version(8, 0, 36))));
+    throw new InvalidOperationException(
+        "❌ No se encontró ConnectionMySql.\nConfigúralo en UserSecrets o en Variables de Entorno de Azure.");
 }
-else
-{
-    throw new InvalidOperationException("Only MySql is configured in this template.");
-}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 36)))
+);
 
 // ==================================================
-// 🔹 AUTOMAPPER
+// 🔥 AUTOMAPPER
 // ==================================================
 builder.Services.AddAutoMapper(cfg =>
 {
@@ -59,19 +62,19 @@ builder.Services.AddAutoMapper(cfg =>
 }, Assembly.GetExecutingAssembly());
 
 // ==================================================
-// 🔹 UNIT OF WORK + REPOSITORIO GENÉRICO
+// 🔥 UNIT OF WORK + REPO GENÉRICO
 // ==================================================
 builder.Services.AddScoped(typeof(IBaseRepository<>), typeof(BaseRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // ==================================================
-// 🔹 DAPPER
+// 🔥 DAPPER
 // ==================================================
 builder.Services.AddScoped<IDbConnectionFactory, DbConnectionFactory>();
 builder.Services.AddScoped<IDapperContext, DapperContext>();
 
 // ==================================================
-// 🔹 SERVICIOS CORE
+// 🔥 SERVICIOS
 // ==================================================
 builder.Services.AddScoped<LibroService>();
 builder.Services.AddScoped<AutorService>();
@@ -80,9 +83,8 @@ builder.Services.AddScoped<FacturaService>();
 builder.Services.AddScoped<DetalleFacturaService>();
 builder.Services.AddScoped<SecurityService>();
 
-
 // ==================================================
-// 🔹 MVC + NEWTONSOFT + FLUENTVALIDATION
+// 🔥 MVC + JSON + VALIDACIÓN
 // ==================================================
 builder.Services.AddControllers()
     .AddNewtonsoftJson(options =>
@@ -94,7 +96,7 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<LibroValidator>();
 
 // ==================================================
-// 🔹 API VERSIONING
+// 🔥 VERSIONADO API
 // ==================================================
 builder.Services.AddApiVersioning(options =>
 {
@@ -108,23 +110,16 @@ builder.Services.AddApiVersioning(options =>
     );
 });
 
-// ==================================================
-// 🔹 VERSIONED API EXPLORER
-// ==================================================
 builder.Services.AddVersionedApiExplorer(options =>
 {
-    options.GroupNameFormat = "'v'VVV";   // v1, v2, v3
+    options.GroupNameFormat = "'v'VVV";
     options.SubstituteApiVersionInUrl = true;
 });
 
 // ==================================================
-// 🔹 AUTENTICACIÓN JWT
+// 🔥 AUTENTICACIÓN JWT
 // ==================================================
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 .AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -142,19 +137,21 @@ builder.Services.AddAuthentication(options =>
 });
 
 // ==================================================
-// 🔹 SWAGGER (GENÉRICO, LAS VERSIONES SE AGREGAN EN UI)
+// 🔥 SWAGGER SIEMPRE HABILITADO (REQUISITO DE AZURE)
 // ==================================================
+builder.Services.AddEndpointsApiExplorer(); // <-- Obligatorio para publicar
 builder.Services.AddSwaggerGen(options =>
 {
+    // XML (para documentar con ///)
     var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath);
 
-    // Soporte para JWT en Swagger (botón Authorize)
+    // JWT
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header usando el esquema Bearer. Ejemplo: \"Bearer {token}\"",
+        Description = "JWT Authorization header usando Bearer. Ej: \"Bearer {token}\"",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.Http,
@@ -173,39 +170,27 @@ builder.Services.AddSwaggerGen(options =>
                     Id = "Bearer"
                 }
             },
-            Array.Empty<string>()
+            new string[] {}
         }
     });
 });
 
 // ==================================================
-// 🔹 BUILD APP
+// 🔥 BUILD PIPELINE
 // ==================================================
 var app = builder.Build();
 
-// ==================================================
-// 🔹 MIDDLEWARE GLOBAL DE EXCEPCIONES
-// ==================================================
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-// ==================================================
-// 🔹 SWAGGER UI
-// ==================================================
-if (app.Environment.IsDevelopment())
+app.UseSwagger(); // Swagger siempre activo
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Librería API v1");
-        options.RoutePrefix = string.Empty;
-    });
-}
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Librería API v1");
+    options.RoutePrefix = string.Empty;
+});
 
-// ==================================================
-// 🔹 PIPELINE GENERAL
-// ==================================================
 app.UseHttpsRedirection();
-app.UseAuthentication();   // ⬅ IMPORTANTE: antes de UseAuthorization
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.Run();
