@@ -79,7 +79,7 @@ namespace Libreria.Core.Services
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Login),
-                new Claim("role", user.Role.ToString()),
+                new Claim(ClaimTypes.Role, user.Role.ToString()),
                 new Claim("name", user.Name),
                 new Claim("userId", user.Id.ToString())
             };
