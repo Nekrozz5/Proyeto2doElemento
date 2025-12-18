@@ -231,8 +231,11 @@ namespace Libreria.Core.Services
 
 
         public async Task<IEnumerable<dynamic>>
-GetFacturacionDiariaAsync(DateTime inicio, DateTime fin)
+            GetFacturacionDiariaAsync(DateTime fecha)
         {
+            var inicio = fecha.Date;
+            var fin = fecha.Date.AddDays(1).AddTicks(-1);
+
             var sql = @"
         SELECT 
             DATE(f.Fecha) AS Fecha,
@@ -242,15 +245,15 @@ GetFacturacionDiariaAsync(DateTime inicio, DateTime fin)
         FROM Facturas f
         INNER JOIN DetalleFactura df ON f.Id = df.FacturaId
         WHERE f.Fecha BETWEEN @inicio AND @fin
-        GROUP BY DATE(f.Fecha)
-        ORDER BY Fecha;
-    ";
+        GROUP BY DATE(f.Fecha);
+                ";
 
             return await _dapper.QueryAsync<dynamic>(
                 sql,
                 new { inicio, fin }
             );
         }
+
 
     }
 }

@@ -137,11 +137,10 @@ namespace Libreria.Api.Controllers
 
         [HttpGet("facturacion-diaria")]
         public async Task<IActionResult> GetFacturacionDiaria(
-    DateTime inicio,
-    DateTime fin)
+    [FromQuery] DateTime fecha)
         {
             var result = await _facturaService
-                .GetFacturacionDiariaAsync(inicio, fin);
+                .GetFacturacionDiariaAsync(fecha);
 
             var dto = result.Select(r => new FacturacionDiariaDTO
             {
