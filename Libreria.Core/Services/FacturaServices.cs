@@ -230,11 +230,10 @@ namespace Libreria.Core.Services
 
 
 
-        public async Task<IEnumerable<dynamic>>
-            GetFacturacionDiariaAsync(DateTime fecha)
+        public async Task<IEnumerable<FacturacionDiariaResult>> GetFacturacionDiariaAsync(DateTime fecha)
         {
             var inicio = fecha.Date;
-            var fin = fecha.Date.AddDays(1).AddTicks(-1);
+            var fin = fecha.Date.AddDays(1);
 
             var sql = @"
         SELECT 
@@ -244,15 +243,17 @@ namespace Libreria.Core.Services
             SUM(df.Cantidad) AS CantidadLibros
         FROM Facturas f
         INNER JOIN DetalleFactura df ON f.Id = df.FacturaId
-        WHERE f.Fecha BETWEEN @inicio AND @fin
-        GROUP BY DATE(f.Fecha);
-                ";
+        WHERE f.Fecha >= @inicio
+          AND f.Fecha < @fin
+        GROUP BY DATE(f.Fecha), DAYNAME(f.Fecha);
+    ";
 
-            return await _dapper.QueryAsync<dynamic>(
+            return await _dapper.QueryAsync<FacturacionDiariaResult>(
                 sql,
                 new { inicio, fin }
             );
         }
+
 
 
     }

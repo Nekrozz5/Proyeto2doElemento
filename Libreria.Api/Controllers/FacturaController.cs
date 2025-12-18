@@ -136,11 +136,9 @@ namespace Libreria.Api.Controllers
 
 
         [HttpGet("facturacion-diaria")]
-        public async Task<IActionResult> GetFacturacionDiaria(
-    [FromQuery] DateTime fecha)
+        public async Task<IActionResult> GetFacturacionDiaria([FromQuery] DateTime fecha)
         {
-            var result = await _facturaService
-                .GetFacturacionDiariaAsync(fecha);
+            var result = await _facturaService.GetFacturacionDiariaAsync(fecha);
 
             var dto = result.Select(r => new FacturacionDiariaDTO
             {
@@ -152,5 +150,6 @@ namespace Libreria.Api.Controllers
 
             return Ok(dto);
         }
+
     }
 }
