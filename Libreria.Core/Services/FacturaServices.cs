@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Libreria.Core.CustomEntities;
 
+
 namespace Libreria.Core.Services
 {
     public class FacturaService
@@ -225,5 +226,31 @@ namespace Libreria.Core.Services
 
             return await _dapper.QueryAsync<dynamic>(sql);
         }
+
+
+
+
+        public async Task<IEnumerable<dynamic>>
+GetFacturacionDiariaAsync(DateTime inicio, DateTime fin)
+        {
+            var sql = @"
+        SELECT 
+            DATE(f.Fecha) AS Fecha,
+            DAYNAME(f.Fecha) AS Dia,
+            SUM(df.Subtotal) AS MontoTotal,
+            SUM(df.Cantidad) AS CantidadLibros
+        FROM Facturas f
+        INNER JOIN DetalleFactura df ON f.Id = df.FacturaId
+        WHERE f.Fecha BETWEEN @inicio AND @fin
+        GROUP BY DATE(f.Fecha)
+        ORDER BY Fecha;
+    ";
+
+            return await _dapper.QueryAsync<dynamic>(
+                sql,
+                new { inicio, fin }
+            );
+        }
+
     }
 }

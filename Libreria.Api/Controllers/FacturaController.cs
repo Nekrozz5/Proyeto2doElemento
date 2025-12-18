@@ -128,5 +128,30 @@ namespace Libreria.Api.Controllers
 
             return Ok(response);
         }
+
+
+
+
+
+
+
+        [HttpGet("facturacion-diaria")]
+        public async Task<IActionResult> GetFacturacionDiaria(
+    DateTime inicio,
+    DateTime fin)
+        {
+            var result = await _facturaService
+                .GetFacturacionDiariaAsync(inicio, fin);
+
+            var dto = result.Select(r => new FacturacionDiariaDTO
+            {
+                Fecha = r.Fecha,
+                Dia = r.Dia,
+                MontoTotal = r.MontoTotal,
+                CantidadLibros = r.CantidadLibros
+            });
+
+            return Ok(dto);
+        }
     }
 }
